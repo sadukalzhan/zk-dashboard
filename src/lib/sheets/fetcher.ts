@@ -1,10 +1,17 @@
 // Google Sheets fetcher.
-// Strategy: prefer Google Sheets API v4 (with API key) for batch reads.
-// Falls back to public gviz CSV endpoint (no API key, works for public sheets).
+// Auth modes (in order of preference):
+//   1) Service Account JSON (GOOGLE_SERVICE_ACCOUNT_JSON env var or
+//      GOOGLE_APPLICATION_CREDENTIALS file path) — recommended.
+//   2) API key (GOOGLE_SHEETS_API_KEY env var) — works for public sheets only.
+//   3) Public gviz CSV fallback — no auth, only for "Anyone with the link" sheets.
 
+import { google, sheets_v4 } from "googleapis";
+import { GoogleAuth, JWT } from "google-auth-library";
 import type { SheetGrid, CellValue } from "../types";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_SHEETS_API_KEY;
+const SERVICE_ACCOUNT_JSON_RAW = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+const SERVICE_ACCOUNT_FILE = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
 export type FetchResult = {
   sheetName: string;
@@ -19,6 +26,68 @@ export function extractSpreadsheetId(url: string): string | null {
 
 type SheetMeta = { sheetId: number; title: string; rowCount: number; columnCount: number };
 
+// ---------- Auth ----------
+
+type ServiceAccountKey = {
+  client_email: string;
+  private_key: string;
+  type?: string;
+};
+
+let cachedJwt: JWT | null = null;
+
+function loadServiceAccount(): ServiceAccountKey | null {
+  if (SERVICE_ACCOUNT_JSON_RAW) {
+    try {
+      // Allow base64-encoded JSON (easier to set in Vercel env)
+      let raw = SERVICE_ACCOUNT_JSON_RAW.trim();
+      if (!raw.startsWith("{")) {
+        try {
+          raw = Buffer.from(raw, "base64").toString("utf-8");
+        } catch {
+          // not base64, fall through
+        }
+      }
+      const parsed = JSON.parse(raw) as ServiceAccountKey;
+      if (parsed.client_email && parsed.private_key) return parsed;
+    } catch (e) {
+      console.warn("Не удалось распарсить GOOGLE_SERVICE_ACCOUNT_JSON:", (e as Error).message);
+    }
+  }
+  return null;
+}
+
+function getServiceAccountAuth(): JWT | GoogleAuth | null {
+  if (cachedJwt) return cachedJwt;
+  const sa = loadServiceAccount();
+  if (sa) {
+    cachedJwt = new google.auth.JWT({
+      email: sa.client_email,
+      key: sa.private_key,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    });
+    return cachedJwt;
+  }
+  if (SERVICE_ACCOUNT_FILE) {
+    return new google.auth.GoogleAuth({
+      keyFile: SERVICE_ACCOUNT_FILE,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    });
+  }
+  return null;
+}
+
+let cachedSheetsClient: sheets_v4.Sheets | null = null;
+async function getSheetsClient(): Promise<sheets_v4.Sheets | null> {
+  if (cachedSheetsClient) return cachedSheetsClient;
+  const auth = getServiceAccountAuth();
+  if (!auth) return null;
+  cachedSheetsClient = google.sheets({ version: "v4", auth: auth as JWT });
+  return cachedSheetsClient;
+}
+
+// ---------- Public API ----------
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, cache: "no-store" });
   if (!res.ok) {
@@ -29,6 +98,23 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export async function getSheetMetadata(spreadsheetId: string): Promise<SheetMeta[]> {
+  const client = await getSheetsClient();
+  if (client) {
+    const resp = await client.spreadsheets.get({
+      spreadsheetId,
+      fields: "sheets.properties",
+    });
+    const sheets = resp.data.sheets ?? [];
+    return sheets.map((s) => {
+      const p = s.properties!;
+      return {
+        sheetId: p.sheetId ?? 0,
+        title: p.title ?? "",
+        rowCount: p.gridProperties?.rowCount ?? 0,
+        columnCount: p.gridProperties?.columnCount ?? 0,
+      };
+    });
+  }
   if (GOOGLE_API_KEY) {
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties&key=${GOOGLE_API_KEY}`;
     const data = await fetchJson<{
@@ -42,8 +128,7 @@ export async function getSheetMetadata(spreadsheetId: string): Promise<SheetMeta
     }));
   }
   throw new Error(
-    "GOOGLE_SHEETS_API_KEY не задан. Без него нельзя получить список листов. " +
-      "Задайте переменную окружения GOOGLE_SHEETS_API_KEY."
+    "Не настроен Google Sheets API. Задайте GOOGLE_SERVICE_ACCOUNT_JSON (рекомендуется) или GOOGLE_SHEETS_API_KEY."
   );
 }
 
@@ -53,6 +138,21 @@ export async function fetchSheetsByNames(
   sheetNames: string[],
 ): Promise<FetchResult[]> {
   if (!sheetNames.length) return [];
+
+  const client = await getSheetsClient();
+  if (client) {
+    const resp = await client.spreadsheets.values.batchGet({
+      spreadsheetId,
+      ranges: sheetNames.map((n) => `'${n.replace(/'/g, "''")}'`),
+      valueRenderOption: "UNFORMATTED_VALUE",
+      dateTimeRenderOption: "FORMATTED_STRING",
+    });
+    const ranges = resp.data.valueRanges ?? [];
+    return sheetNames.map((name, i) => ({
+      sheetName: name,
+      grid: (ranges[i]?.values ?? []) as SheetGrid,
+    }));
+  }
 
   if (GOOGLE_API_KEY) {
     const ranges = sheetNames.map((n) => encodeURIComponent(`'${n.replace(/'/g, "''")}'`));
@@ -67,7 +167,7 @@ export async function fetchSheetsByNames(
     }));
   }
 
-  // Fallback: gviz CSV endpoint (works only for publicly-shared sheets without API key)
+  // Last-resort fallback: gviz CSV (only public sheets)
   const results: FetchResult[] = [];
   for (const name of sheetNames) {
     const grid = await fetchPublicCsv(spreadsheetId, name);

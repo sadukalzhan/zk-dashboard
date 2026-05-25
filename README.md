@@ -40,19 +40,31 @@ npm run dev
 
 ## Подготовка Google Sheets
 
+Есть два способа авторизации — выберите один.
+
+### Вариант A (рекомендуется): Service Account
+
 1. Создайте проект в [Google Cloud Console](https://console.cloud.google.com/).
-2. Включите **Google Sheets API**.
-3. Создайте API-ключ (Credentials → Create credentials → API key).
-4. Ограничьте ключ только Sheets API.
-5. Скопируйте ключ в `GOOGLE_SHEETS_API_KEY`.
-6. Откройте таблицу → **Поделиться** → «Все, у кого есть ссылка» → роль «Читатель».
+2. Включите **Google Sheets API** (APIs & Services → Library → Google Sheets API → Enable).
+3. Создайте сервисный аккаунт: APIs & Services → Credentials → **+ Create Credentials → Service Account**.
+4. Откройте созданный аккаунт → вкладка **Keys** → **Add Key → Create new key → JSON** → скачайте файл.
+5. Скопируйте всё содержимое JSON-файла в переменную `GOOGLE_SERVICE_ACCOUNT_JSON` (можно как есть, можно base64).
+6. В каждой Google-таблице нажмите **Поделиться** → вставьте email сервисного аккаунта (из поля `client_email` в JSON) → роль **«Читатель»** → Отправить.
+
+### Вариант B: API-ключ (только для публичных таблиц)
+
+1. Создайте проект и включите Google Sheets API (как выше).
+2. Credentials → **+ Create Credentials → API key**.
+3. Restrict key → API restrictions → выбрать **Google Sheets API**.
+4. Скопируйте ключ в `GOOGLE_SHEETS_API_KEY`.
+5. Каждую таблицу сделайте публичной: **Поделиться** → «Все, у кого есть ссылка» → роль «Читатель».
 
 ## Деплой на Vercel
 
 1. Запушьте репозиторий в GitHub.
 2. На [vercel.com](https://vercel.com) → New Project → импортируйте репозиторий.
 3. В **Environment Variables** добавьте:
-   - `GOOGLE_SHEETS_API_KEY`
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` (полное содержимое JSON, либо base64) **или** `GOOGLE_SHEETS_API_KEY`
    - `ADMIN_PASSWORD`
    - (опционально) `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 4. Deploy. Через ~2 минуты дашборд доступен по адресу `<project>.vercel.app`.
