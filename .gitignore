@@ -38,5 +38,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local data
-/data/
+# local data overrides (the default seed is checked in; sessions can override locally)
+/data/local-*.json
+.vercel
