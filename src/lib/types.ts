@@ -167,3 +167,69 @@ export type LineMonthData = {
   }[];
   errors: string[];
 };
+
+// ---------- Finance ----------
+
+export type FinanceSourceEntry = {
+  id: string;
+  kind: "finance";
+  year: number;
+  spreadsheetId: string;
+  url: string;
+  createdAt: string;
+};
+
+// One section of the P&L (e.g. "I. ДОХОДЫ ОТ РЕАЛИЗАЦИИ", "II. СЕБЕСТОИМОСТЬ")
+export type FinanceSection = {
+  title: string;
+  rows: Array<{ label: string; values: number[]; total: number }>;
+  totals: number[]; // 12 months
+  totalYear: number;
+};
+
+export type FinanceMargins = {
+  grossMarginPct: number[]; // 12 monthly % (0..1)
+  ebitMarginPct: number[];
+  netMarginPct: number[];
+  yearGross: number;
+  yearEbit: number;
+  yearNet: number;
+};
+
+export type FinanceStarRow = {
+  label: string; // e.g. "★ ИТОГО ВЫРУЧКА", "★★ ЧИСТАЯ ПРИБЫЛЬ"
+  values: number[]; // 12 months
+  total: number;
+};
+
+export type ProfitLoss = {
+  sections: FinanceSection[];
+  stars: FinanceStarRow[]; // key star rows in order found
+  // Derived top-level metrics (best-effort by label match)
+  revenue?: FinanceStarRow;
+  cogs?: FinanceStarRow;
+  grossProfit?: FinanceStarRow;
+  ebitda?: FinanceStarRow;
+  ebit?: FinanceStarRow;
+  ebt?: FinanceStarRow;
+  netProfit?: FinanceStarRow;
+  margins: FinanceMargins;
+};
+
+export type CashFlow = {
+  beginningBalance: number[]; // 12 months
+  inflowsBySection: FinanceSection[]; // 1. Оп., 2. Инв., 3. Фин.
+  outflowsBySection: FinanceSection[];
+  totalInflows: number[];
+  totalOutflows: number[];
+  netCashFlow: number[];
+  endingBalance: number[];
+};
+
+export type FinanceData = {
+  year: number;
+  source?: FinanceSourceEntry;
+  pl: ProfitLoss | null;
+  cashFlow: CashFlow | null;
+  errors: string[];
+};

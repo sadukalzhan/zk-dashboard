@@ -5,11 +5,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Redis } from "@upstash/redis";
-import type { LineNumber, SourceEntry } from "../types";
+import type { FinanceSourceEntry, LineNumber, SourceEntry } from "../types";
 import { extractSpreadsheetId } from "../sheets/fetcher";
 
 const DATA_FILE = path.join(process.cwd(), "data", "sources.json");
+const FINANCE_DATA_FILE = path.join(process.cwd(), "data", "finance-sources.json");
 const KEY = "zk_dashboard:sources";
+const FINANCE_KEY = "zk_dashboard:finance_sources";
 
 let redisClient: Redis | null = null;
 function getRedis(): Redis | null {
@@ -98,6 +100,86 @@ export async function upsertSource(input: {
 export async function deleteSource(id: string): Promise<void> {
   const all = await listSources();
   await saveAllSources(all.filter((s) => s.id !== id));
+}
+
+// ---------- Finance sources ----------
+
+async function readFinanceFile(): Promise<FinanceSourceEntry[]> {
+  try {
+    const text = await fs.readFile(FINANCE_DATA_FILE, "utf-8");
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed;
+    return [];
+  } catch (e: unknown) {
+    const code = (e as NodeJS.ErrnoException)?.code;
+    if (code === "ENOENT") return [];
+    throw e;
+  }
+}
+
+async function writeFinanceFile(sources: FinanceSourceEntry[]): Promise<void> {
+  await fs.mkdir(path.dirname(FINANCE_DATA_FILE), { recursive: true });
+  await fs.writeFile(FINANCE_DATA_FILE, JSON.stringify(sources, null, 2), "utf-8");
+}
+
+export async function listFinanceSources(): Promise<FinanceSourceEntry[]> {
+  const redis = getRedis();
+  if (redis) {
+    const data = await redis.get<FinanceSourceEntry[]>(FINANCE_KEY);
+    return data ?? [];
+  }
+  return readFinanceFile();
+}
+
+async function saveAllFinanceSources(sources: FinanceSourceEntry[]): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    await redis.set(FINANCE_KEY, sources);
+    return;
+  }
+  await writeFinanceFile(sources);
+}
+
+export async function findFinanceSource(year: number): Promise<FinanceSourceEntry | null> {
+  const all = await listFinanceSources();
+  return all.find((s) => s.year === year) ?? null;
+}
+
+export async function upsertFinanceSource(input: { year: number; url: string }): Promise<FinanceSourceEntry> {
+  const spreadsheetId = extractSpreadsheetId(input.url);
+  if (!spreadsheetId) {
+    throw new Error("Не удалось распознать ID Google Sheets в URL. Проверьте ссылку.");
+  }
+  const all = await listFinanceSources();
+  const now = new Date().toISOString();
+  const idx = all.findIndex((s) => s.year === input.year);
+  let entry: FinanceSourceEntry;
+  if (idx === -1) {
+    entry = {
+      id: `fin-${input.year}-${Date.now()}`,
+      kind: "finance",
+      year: input.year,
+      spreadsheetId,
+      url: input.url,
+      createdAt: now,
+    };
+    all.push(entry);
+  } else {
+    entry = { ...all[idx], spreadsheetId, url: input.url };
+    all[idx] = entry;
+  }
+  await saveAllFinanceSources(all);
+  return entry;
+}
+
+export async function deleteFinanceSource(id: string): Promise<void> {
+  const all = await listFinanceSources();
+  await saveAllFinanceSources(all.filter((s) => s.id !== id));
+}
+
+export async function availableFinanceYears(): Promise<number[]> {
+  const all = await listFinanceSources();
+  return [...new Set(all.map((s) => s.year))].sort((a, b) => b - a);
 }
 
 export async function availableMonths(): Promise<Array<{ year: number; month: number; hasLine1: boolean; hasLine2: boolean }>> {

@@ -50,6 +50,25 @@ export function Header({ line, year, month, compare, availableMonths }: Props) {
           </div>
         </Link>
 
+        <nav className="ml-2 flex rounded-lg bg-slate-100 p-0.5">
+          <Link
+            href={`/?${params.toString()}`}
+            className={`rounded-md px-3 py-1.5 text-sm transition ${
+              pathname === "/" ? "bg-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Производство
+          </Link>
+          <Link
+            href="/finance"
+            className={`rounded-md px-3 py-1.5 text-sm transition ${
+              pathname === "/finance" ? "bg-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Финансы
+          </Link>
+        </nav>
+
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {/* Compare toggle */}
           <div className="flex rounded-lg bg-slate-100 p-0.5">

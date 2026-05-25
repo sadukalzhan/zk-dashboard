@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LineNumber, SourceEntry } from "@/lib/types";
+import type { FinanceSourceEntry, LineNumber, SourceEntry } from "@/lib/types";
 import { LINE_LABELS, MONTH_NAMES_RU } from "@/lib/line-mapping";
 
 type Props = {
   initialAuthed: boolean;
   initialSources: SourceEntry[];
+  initialFinanceSources: FinanceSourceEntry[];
 };
 
-export function SettingsClient({ initialAuthed, initialSources }: Props) {
+export function SettingsClient({ initialAuthed, initialSources, initialFinanceSources }: Props) {
   const router = useRouter();
   const [authed, setAuthed] = useState(initialAuthed);
   const [sources, setSources] = useState<SourceEntry[]>(initialSources);
+  const [financeSources, setFinanceSources] = useState<FinanceSourceEntry[]>(initialFinanceSources);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [loginBusy, setLoginBusy] = useState(false);
@@ -35,6 +37,9 @@ export function SettingsClient({ initialAuthed, initialSources }: Props) {
       const r = await fetch("/api/sources");
       const j2 = await r.json();
       setSources(j2.sources ?? []);
+      const rF = await fetch("/api/finance-sources");
+      const jF = await rF.json();
+      setFinanceSources(jF.sources ?? []);
     } catch (e: unknown) {
       setAuthError(e instanceof Error ? e.message : "Ошибка входа");
     } finally {
@@ -127,6 +132,52 @@ export function SettingsClient({ initialAuthed, initialSources }: Props) {
         )}
       </div>
 
+      <FinanceSourceForm
+        onSubmitted={(s) => {
+          setFinanceSources((prev) => {
+            const next = prev.filter((x) => x.year !== s.year);
+            return [...next, s].sort((a, b) => b.year - a.year);
+          });
+        }}
+      />
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-800">Финансовые источники</h2>
+        </header>
+        {financeSources.length === 0 ? (
+          <div className="p-6 text-sm text-slate-500">Пока ничего не добавлено.</div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {financeSources
+              .slice()
+              .sort((a, b) => b.year - a.year)
+              .map((s) => (
+                <li key={s.id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-800">Финансы · {s.year} г.</div>
+                    <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                      {s.url}
+                    </a>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Удалить этот финансовый источник?")) return;
+                      const res = await fetch(`/api/finance-sources?id=${encodeURIComponent(s.id)}`, { method: "DELETE" });
+                      if (res.ok) {
+                        setFinanceSources((prev) => prev.filter((x) => x.id !== s.id));
+                      }
+                    }}
+                    className="text-sm text-rose-600 hover:underline"
+                  >
+                    Удалить
+                  </button>
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+
       <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 text-sm text-slate-700">
         <h3 className="mb-1 font-semibold text-blue-900">Как сделать Google Sheets доступным:</h3>
         <ol className="ml-5 list-decimal space-y-1 text-xs">
@@ -137,6 +188,78 @@ export function SettingsClient({ initialAuthed, initialSources }: Props) {
         </ol>
       </div>
     </div>
+  );
+}
+
+function FinanceSourceForm({ onSubmitted }: { onSubmitted: (s: FinanceSourceEntry) => void }) {
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/finance-sources", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ year, url }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Ошибка");
+      onSubmitted(j.entry as FinanceSourceEntry);
+      setSuccess(`Сохранено: финансы ${year} г.`);
+      setUrl("");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка сохранения");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="mb-3 text-sm font-semibold text-slate-800">Финансы · добавить / обновить</h2>
+      <p className="mb-3 text-xs text-slate-500">Таблица должна содержать листы <b>ОПиУ</b> (Отчёт о прибылях и убытках) и <b>ДДС</b> (Движение денежных средств) с помесячными колонками.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-slate-600">Год</span>
+          <input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            min={2020}
+            max={2100}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block sm:col-span-3">
+          <span className="mb-1 block text-xs font-medium text-slate-600">Ссылка на Google Sheets</span>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            required
+            placeholder="https://docs.google.com/spreadsheets/d/..."
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"
+          />
+        </label>
+      </div>
+      {error && <div className="mt-3 text-sm text-rose-600">{error}</div>}
+      {success && <div className="mt-3 text-sm text-emerald-600">{success}</div>}
+      <button
+        type="submit"
+        disabled={busy}
+        className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {busy ? "Сохранение…" : "Сохранить"}
+      </button>
+    </form>
   );
 }
 
