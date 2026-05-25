@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ЗК-Дашборд
 
-## Getting Started
+Производственный дашборд для ТОО «Зерде-Керамика Актобе».
+Анализирует данные двух производственных линий (ЗК-120/60 №1 и ЗК-60/60 №2)
+из Google Sheets.
 
-First, run the development server:
+## Стек
+
+- Next.js 16 (App Router, React 19)
+- TypeScript + Tailwind CSS v4
+- Recharts (графики)
+- Google Sheets API v4 (через API-ключ)
+- Опционально — Upstash Redis для хранения списка источников в продакшне
+
+## Что показывает
+
+7 аналитических блоков:
+
+1. **KPI** — выход, простои, OEE, А/В/Брак
+2. **Годовой тренд** — помесячный график (выход + простои)
+3. **Анализ простоев по участкам** — пирог, таблица механ/электр/орг + топ-10 причин
+4. **Тепловая карта** — посменные простои (день/ночь × 1–31) с фильтром по участку
+5. **Потери по переделам** — Пресс → Сушилка → ЛГ → Печь → Ректификация → Сорт → Склад
+6. **Технические параметры** — цикл пресса, цикл обжига, температура, OEE
+7. **Детальная таблица** — по дням и сменам, с итогами
+
+Плюс **режим сравнения** двух линий за один месяц.
+
+## Локальный запуск
 
 ```bash
+npm install
+cp .env.example .env.local
+# Заполните GOOGLE_SHEETS_API_KEY и ADMIN_PASSWORD
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте http://localhost:3000. При первом запуске зайдите в `/settings`,
+введите пароль и добавьте ссылку на Google Sheets для нужной линии и месяца.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Подготовка Google Sheets
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Создайте проект в [Google Cloud Console](https://console.cloud.google.com/).
+2. Включите **Google Sheets API**.
+3. Создайте API-ключ (Credentials → Create credentials → API key).
+4. Ограничьте ключ только Sheets API.
+5. Скопируйте ключ в `GOOGLE_SHEETS_API_KEY`.
+6. Откройте таблицу → **Поделиться** → «Все, у кого есть ссылка» → роль «Читатель».
 
-## Learn More
+## Деплой на Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. Запушьте репозиторий в GitHub.
+2. На [vercel.com](https://vercel.com) → New Project → импортируйте репозиторий.
+3. В **Environment Variables** добавьте:
+   - `GOOGLE_SHEETS_API_KEY`
+   - `ADMIN_PASSWORD`
+   - (опционально) `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+4. Deploy. Через ~2 минуты дашборд доступен по адресу `<project>.vercel.app`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Если **Upstash Redis** не настроен, источники сохраняются в файл `data/sources.json`.
+В Vercel файловая система read-only — поэтому для прода нужен Upstash (бесплатный план хватит).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Создание Upstash Redis (опционально, бесплатно)
 
-## Deploy on Vercel
+1. Зайдите на https://upstash.com → New Database → Free tier → Create.
+2. Скопируйте `UPSTASH_REDIS_REST_URL` и `UPSTASH_REDIS_REST_TOKEN`.
+3. Добавьте их в переменные окружения Vercel.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Структура данных в Google Sheets
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Дашборд ожидает листы:
+
+- `Выход и простои печи по месяцам` — годовой свод (для Блока 2)
+- `Простои пресса`, `Простои линии глазурования`, `Простои печи`,
+  `Простои ректификации`, `Простои сортировки и упаковки` — для Блоков 3, 4
+- `1 день`, `1 ночь`, …, `31 день`, `31 ночь` — посменные отчёты для Блоков 1, 5, 6, 7
+
+Важно: на линии 1 разделы называются «Ректификация 2» и «Сортировка и Упаковка 2»,
+а на линии 2 — «Ректификация 1» и «Сортировка и Упаковка 1» (так выходит из исторического
+порядка установки оборудования). Парсер учитывает это автоматически.
+
+## Кэш и обновление
+
+- Серверный кэш — 15 минут (настраивается через `CACHE_TTL_MS`).
+- Кнопка «↻ Обновить» в шапке принудительно сбрасывает кэш и читает Google Sheets заново.
+- При добавлении/удалении источника кэш сбрасывается автоматически.

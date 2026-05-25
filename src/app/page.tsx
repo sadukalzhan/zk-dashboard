@@ -1,65 +1,138 @@
-import Image from "next/image";
+import { Header } from "@/components/Header";
+import { KpiCards } from "@/components/blocks/KpiCards";
+import { YearlyTrend } from "@/components/blocks/YearlyTrend";
+import { DowntimeByArea } from "@/components/blocks/DowntimeByArea";
+import { Heatmap } from "@/components/blocks/Heatmap";
+import { Losses } from "@/components/blocks/Losses";
+import { Parameters } from "@/components/blocks/Parameters";
+import { DailyTable } from "@/components/blocks/DailyTable";
+import { LINE_LABELS } from "@/lib/line-mapping";
+import { getLineMonthData } from "@/lib/sheets/aggregator";
+import { availableMonths } from "@/lib/store/sources";
+import type { LineNumber } from "@/lib/types";
+import Link from "next/link";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+type SearchParams = Promise<{
+  line?: string;
+  year?: string;
+  month?: string;
+  compare?: string;
+}>;
+
+export default async function Home({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const months = await availableMonths();
+  const fallback = months[0] ?? { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+  const year = Number(sp.year ?? fallback.year);
+  const month = Number(sp.month ?? fallback.month);
+  const lineParam = Number(sp.line ?? 1);
+  const line: LineNumber = lineParam === 2 ? 2 : 1;
+  const compare = sp.compare === "1";
+
+  const primary = await getLineMonthData(line, year, month);
+  const other: LineNumber = line === 1 ? 2 : 1;
+  const secondary = compare ? await getLineMonthData(other, year, month) : null;
+
+  const noData = months.length === 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <>
+      <Header line={line} year={year} month={month} compare={compare} availableMonths={months} />
+      <main className="mx-auto max-w-screen-2xl space-y-4 px-4 py-6 sm:px-6">
+        {noData && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+            <h2 className="text-base font-semibold text-amber-900">Источники данных не настроены</h2>
+            <p className="mt-2 text-sm text-amber-900/80">
+              Чтобы увидеть данные, добавьте ссылки на Google Sheets для каждой линии и месяца в{" "}
+              <Link href="/settings" className="font-semibold underline">панели настроек</Link>.
+            </p>
+          </div>
+        )}
+
+        {primary.errors.length > 0 && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {primary.errors.map((e, i) => (
+              <div key={i}>{e}</div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-xl font-semibold text-slate-900">
+            {compare
+              ? `Сравнение линий — ${monthLabel(month)} ${year}`
+              : `${LINE_LABELS[line].long} — ${monthLabel(month)} ${year}`}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
+          {primary.source && (
             <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href={primary.source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:underline"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Исходный Google Sheets ↗
+            </a>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {compare && secondary ? (
+          <>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4 rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
+                <div className="text-sm font-semibold text-blue-900">{LINE_LABELS[1].long}</div>
+                <KpiCards data={line === 1 ? primary : secondary} />
+              </div>
+              <div className="space-y-4 rounded-2xl border border-sky-100 bg-sky-50/30 p-4">
+                <div className="text-sm font-semibold text-sky-900">{LINE_LABELS[2].long}</div>
+                <KpiCards data={line === 2 ? primary : secondary} />
+              </div>
+            </div>
+            <YearlyTrend
+              primary={line === 1 ? primary : secondary}
+              secondary={line === 1 ? secondary : primary}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DowntimeByArea data={line === 1 ? primary : secondary} />
+              <DowntimeByArea data={line === 2 ? primary : secondary} />
+            </div>
+            <Losses data={line === 1 ? primary : secondary} compareWith={line === 1 ? secondary : primary} />
+            <Parameters data={line === 1 ? primary : secondary} compareWith={line === 1 ? secondary : primary} />
+          </>
+        ) : (
+          <>
+            <KpiCards data={primary} />
+            <YearlyTrend primary={primary} />
+            <DowntimeByArea data={primary} />
+            <Heatmap data={primary} />
+            <Losses data={primary} />
+            <Parameters data={primary} />
+            <DailyTable data={primary} />
+          </>
+        )}
       </main>
-    </div>
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+        ТОО Зерде-Керамика Актобе · ЗК-Дашборд · {new Date().getFullYear()}
+      </footer>
+    </>
   );
+}
+
+function monthLabel(m: number): string {
+  const names = [
+    "Январь",
+    "Февраль",
+    "Март",
+    "Апрель",
+    "Май",
+    "Июнь",
+    "Июль",
+    "Август",
+    "Сентябрь",
+    "Октябрь",
+    "Ноябрь",
+    "Декабрь",
+  ];
+  return names[m - 1] ?? `${m}`;
 }
