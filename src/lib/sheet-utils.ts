@@ -26,18 +26,22 @@ export function cellLooksLikeDate(value: CellValue): boolean {
 
 export function parseDateCell(value: CellValue): Date | null {
   if (value && typeof value === "object" && value instanceof Date) return value;
-  const s = toStr(value);
+  const s = toStr(value).trim();
   if (!s) return null;
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) return d;
-  // dd.mm.yyyy fallback
-  const m = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})/);
-  if (m) {
-    const dd = m[1];
-    const mm = m[2];
-    let yyyy = m[3];
+  // Russian/Kazakh sheets use dd.mm.yyyy. Check this FIRST, otherwise JS
+  // Date interprets "01.05.2026" as mm.dd.yyyy (Jan 5) — silently wrong.
+  const ddmm = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})/);
+  if (ddmm) {
+    const dd = ddmm[1];
+    const mm = ddmm[2];
+    let yyyy = ddmm[3];
     if (yyyy.length === 2) yyyy = "20" + yyyy;
     return new Date(`${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`);
+  }
+  // ISO yyyy-mm-dd or other formats Date can parse safely.
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d;
   }
   return null;
 }
