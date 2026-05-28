@@ -3,7 +3,6 @@ import { KpiCards } from "@/components/blocks/KpiCards";
 import { YearlyTrend } from "@/components/blocks/YearlyTrend";
 import { DowntimeByArea } from "@/components/blocks/DowntimeByArea";
 import { Heatmap } from "@/components/blocks/Heatmap";
-import { Losses } from "@/components/blocks/Losses";
 import { Parameters } from "@/components/blocks/Parameters";
 import { LINE_LABELS } from "@/lib/line-mapping";
 import { getLineMonthData } from "@/lib/sheets/aggregator";
@@ -96,7 +95,6 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
               <DowntimeByArea data={line === 1 ? primary : secondary} />
               <DowntimeByArea data={line === 2 ? primary : secondary} />
             </div>
-            <Losses data={line === 1 ? primary : secondary} compareWith={line === 1 ? secondary : primary} />
             <Parameters data={line === 1 ? primary : secondary} compareWith={line === 1 ? secondary : primary} />
           </>
         ) : (
@@ -105,7 +103,6 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             <YearlyTrend primary={primary} />
             <DowntimeByArea data={primary} />
             <Heatmap data={primary} />
-            <Losses data={primary} />
             <Parameters data={primary} />
           </>
         )}

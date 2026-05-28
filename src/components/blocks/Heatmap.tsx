@@ -11,12 +11,14 @@ const AREAS: { area: DowntimeArea | "all"; label: string }[] = [
   { area: "lg", label: "ЛГ" },
   { area: "kiln", label: "Печь" },
   { area: "rectification", label: "Ректификация" },
+  { area: "sortingPacking", label: "Сортировка" },
 ];
 
 export function Heatmap({ data }: { data: LineMonthData }) {
   const [selected, setSelected] = useState<DowntimeArea | "all">("all");
 
-  // Build per-day day/night values
+  // Build per-day day/night minutes directly from the same downtime source
+  // used by Block 3 (data.downtime[area].days[*].shifts.{day,night}).
   const dayCount = 31;
   const cells: { day: number; dayMin: number; nightMin: number }[] = Array.from({ length: dayCount }, (_, i) => ({
     day: i + 1,
@@ -24,17 +26,20 @@ export function Heatmap({ data }: { data: LineMonthData }) {
     nightMin: 0,
   }));
 
-  const sources = selected === "all"
-    ? data.heatmap
-    : data.heatmap.filter((h) => h.area === selected);
+  const areasToInclude: DowntimeArea[] = selected === "all"
+    ? (["press", "lg", "kiln", "rectification", "sortingPacking"] as DowntimeArea[])
+    : [selected];
 
-  for (const src of sources) {
-    for (const d of src.days) {
+  let grandTotal = 0;
+  for (const area of areasToInclude) {
+    const ad = data.downtime[area];
+    if (!ad) continue;
+    for (const d of ad.days) {
       const c = cells[d.day - 1];
-      if (c) {
-        c.dayMin += d.dayMin;
-        c.nightMin += d.nightMin;
-      }
+      if (!c) continue;
+      c.dayMin += d.shifts.day;
+      c.nightMin += d.shifts.night;
+      grandTotal += d.shifts.day + d.shifts.night;
     }
   }
 
@@ -55,7 +60,7 @@ export function Heatmap({ data }: { data: LineMonthData }) {
     <Card
       title="Блок 4 · Тепловая карта посменных простоев"
       rightSlot={
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {AREAS.map((a) => (
             <button
               key={a.area}
@@ -102,7 +107,9 @@ export function Heatmap({ data }: { data: LineMonthData }) {
           </div>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <span>Всего за выбранную область: {formatNumber(grandTotal)} мин</span>
+        <span className="mx-2 text-slate-300">|</span>
         Шкала:
         <span className="h-3 w-5 bg-rose-100" />
         <span className="h-3 w-5 bg-rose-300" />
