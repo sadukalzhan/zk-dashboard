@@ -37,15 +37,31 @@ async function readFromFile(): Promise<SourceEntry[]> {
 }
 
 async function writeToFile(sources: SourceEntry[]): Promise<void> {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(sources, null, 2), "utf-8");
+  try {
+    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
+    await fs.writeFile(DATA_FILE, JSON.stringify(sources, null, 2), "utf-8");
+  } catch (e: unknown) {
+    const code = (e as NodeJS.ErrnoException)?.code;
+    if (code === "EROFS" || code === "EACCES") {
+      throw new Error(
+        "Файловая система только для чтения (Vercel). Подключите Upstash Redis: задайте переменные окружения UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN."
+      );
+    }
+    throw e;
+  }
 }
 
 export async function listSources(): Promise<SourceEntry[]> {
   const redis = getRedis();
   if (redis) {
     const data = await redis.get<SourceEntry[]>(KEY);
-    return data ?? [];
+    if (data && data.length) return data;
+    // Seed Redis on first run with whatever is bundled in data/sources.json
+    const seed = await readFromFile().catch(() => []);
+    if (seed.length) {
+      await redis.set(KEY, seed).catch(() => undefined);
+    }
+    return seed;
   }
   return readFromFile();
 }
@@ -118,15 +134,30 @@ async function readFinanceFile(): Promise<FinanceSourceEntry[]> {
 }
 
 async function writeFinanceFile(sources: FinanceSourceEntry[]): Promise<void> {
-  await fs.mkdir(path.dirname(FINANCE_DATA_FILE), { recursive: true });
-  await fs.writeFile(FINANCE_DATA_FILE, JSON.stringify(sources, null, 2), "utf-8");
+  try {
+    await fs.mkdir(path.dirname(FINANCE_DATA_FILE), { recursive: true });
+    await fs.writeFile(FINANCE_DATA_FILE, JSON.stringify(sources, null, 2), "utf-8");
+  } catch (e: unknown) {
+    const code = (e as NodeJS.ErrnoException)?.code;
+    if (code === "EROFS" || code === "EACCES") {
+      throw new Error(
+        "Файловая система только для чтения (Vercel). Подключите Upstash Redis: задайте переменные окружения UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN."
+      );
+    }
+    throw e;
+  }
 }
 
 export async function listFinanceSources(): Promise<FinanceSourceEntry[]> {
   const redis = getRedis();
   if (redis) {
     const data = await redis.get<FinanceSourceEntry[]>(FINANCE_KEY);
-    return data ?? [];
+    if (data && data.length) return data;
+    const seed = await readFinanceFile().catch(() => []);
+    if (seed.length) {
+      await redis.set(FINANCE_KEY, seed).catch(() => undefined);
+    }
+    return seed;
   }
   return readFinanceFile();
 }

@@ -5,7 +5,6 @@ import { DowntimeByArea } from "@/components/blocks/DowntimeByArea";
 import { Heatmap } from "@/components/blocks/Heatmap";
 import { Losses } from "@/components/blocks/Losses";
 import { Parameters } from "@/components/blocks/Parameters";
-import { DailyTable } from "@/components/blocks/DailyTable";
 import { LINE_LABELS } from "@/lib/line-mapping";
 import { getLineMonthData } from "@/lib/sheets/aggregator";
 import { availableMonths } from "@/lib/store/sources";
@@ -108,7 +107,6 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             <Heatmap data={primary} />
             <Losses data={primary} />
             <Parameters data={primary} />
-            <DailyTable data={primary} />
           </>
         )}
       </main>
