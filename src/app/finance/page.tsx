@@ -30,9 +30,9 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
   return (
     <>
       <FinanceHeader year={year} monthIndex={effectiveMonth} availableYears={years} />
-      <main className="mx-auto max-w-screen-2xl space-y-4 px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-screen-2xl space-y-5 px-4 py-6 sm:px-6">
         {hasNoSource && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+          <div className="rounded-lg border border-[#f4c7a8] bg-[#fff4ed] p-6 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">
             <h2 className="text-base font-semibold text-amber-900">Источник финансовых данных не настроен</h2>
             <p className="mt-2 text-sm text-amber-900/80">
               Добавьте ссылку на Google Sheets с ОПиУ и ДДС за <b>{year}</b> год в{" "}
@@ -42,7 +42,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
         )}
 
         {data.errors.length > 0 && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
             {data.errors.map((e, i) => (
               <div key={i}>{e}</div>
             ))}
@@ -50,7 +50,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
         )}
 
         <div className="flex items-baseline justify-between gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">
+          <h1 className="text-2xl font-semibold text-[#192537]">
             Финансовые показатели · {year} г.
           </h1>
           {data.source && (
@@ -58,7 +58,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
               href={data.source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs font-medium text-[#4b6b95] hover:text-[#ee5c25] hover:underline"
             >
               Исходный Google Sheets ↗
             </a>
@@ -70,7 +70,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
         <PLTable data={data} />
         <CashFlowTable data={data} />
       </main>
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-[#dcdde3] bg-[#eef2f6] py-4 text-center text-xs text-[#6f8aac]">
         © {new Date().getFullYear()} ТОО «Зерде-Керамика Актобе»
       </footer>
     </>
