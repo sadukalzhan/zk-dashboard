@@ -233,3 +233,67 @@ export type FinanceData = {
   cashFlow: CashFlow | null;
   errors: string[];
 };
+
+// ---------- Finished products ----------
+
+export type FinishedFormat = 60 | 120;
+
+export type SaleRow = {
+  brand: string;
+  type: "made" | "sale";
+  format: FinishedFormat;
+  month: string;
+  monthNumber: number;
+  year: number;
+  design: string;
+  grade: string;
+  quantity: number;
+};
+
+export type MovementRow = {
+  brand: string;
+  design: string;
+  grade: string;
+  format: FinishedFormat;
+  month: string;
+  monthNumber: number;
+  year: number;
+  produced: number;
+  sold: number;
+  balance: number;
+};
+
+export type InventoryStatus = "critical" | "excess" | "stale" | "ok";
+
+export type InventoryItem = {
+  brand: string;
+  design: string;
+  format: FinishedFormat;
+  currentBalance: number;
+  lastSale: number;
+  overproductionCount: number;
+  excessProduction: number;
+  status: InventoryStatus;
+};
+
+export type FinishedProductsDashboard = {
+  kpis: {
+    totalSales: number;
+    totalMade: number;
+    leadingBrand: string;
+    topDesign: string;
+  };
+  monthlySales: Array<{ month: string; "2023": number; "2024": number; "2025": number }>;
+  brandShare: Array<{ brand: string; sales: number; pct: number }>;
+  formatSplit: Array<{ format: string; sales: number; made: number }>;
+  topDesigns: Array<{ design: string; sales: number }>;
+  yearlyDynamics: Array<{ year: number; sales: number; made: number }>;
+};
+
+export type FinishedProductsData = {
+  structured: SaleRow[];
+  movement: MovementRow[];
+  dashboard: FinishedProductsDashboard;
+  inventory: InventoryItem[];
+  errors: string[];
+};
