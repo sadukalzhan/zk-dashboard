@@ -32,10 +32,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-
-# vercel
-.vercel
+!.env.example
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local data overrides (the default seed is checked in; sessions can override locally)
+/data/local-*.json
+.vercel
