@@ -13,8 +13,8 @@ export default async function SettingsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Панель настроек</h1>
-        <Link href="/" className="text-sm text-blue-600 hover:underline">← На дашборд</Link>
+        <h1 className="text-2xl font-semibold text-[#192537]">Панель настроек</h1>
+        <Link href="/" className="text-sm font-medium text-[#4b6b95] hover:text-[#ee5c25] hover:underline">← На дашборд</Link>
       </div>
       <SettingsClient
         initialAuthed={authed}
