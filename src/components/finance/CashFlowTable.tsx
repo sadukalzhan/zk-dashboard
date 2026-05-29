@@ -46,7 +46,7 @@ export function CashFlowTable({ data }: { data: FinanceData }) {
           <td className="px-2 py-1.5 text-right">{fmt(section.totalYear)}</td>
         </tr>
         {isOpen && section.rows.map((row, rIdx) => (
-          <tr key={`row-${key}-${rIdx}`} className="text-slate-700 hover:bg-slate-50">
+          <tr key={`row-${key}-${rIdx}`} className="text-[#192537] hover:bg-[#f4f7fb]">
             <td className="px-2 py-1 pl-7 text-left">{row.label}</td>
             {row.values.map((v, i) => (
               <td key={i} className="px-2 py-1 text-right">{fmt(v)}</td>
@@ -73,16 +73,16 @@ export function CashFlowTable({ data }: { data: FinanceData }) {
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs tabular-nums">
           <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
+            <tr className="border-b border-[#dcdde3] text-[#6f8aac]">
               <th className="px-2 py-2 text-left font-medium">Статья</th>
               {MONTH_NAMES_SHORT.map((m) => (
                 <th key={m} className="px-2 py-2 text-right font-medium">{m}</th>
               ))}
-              <th className="px-2 py-2 text-right font-semibold text-slate-700">ИТОГО</th>
+              <th className="px-2 py-2 text-right font-semibold text-[#192537]">ИТОГО</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="bg-blue-50 font-semibold text-blue-900">
+            <tr className="bg-[#f4f7fb] font-semibold text-[#192537]">
               <td className="px-2 py-1.5 text-left">Остаток на начало периода</td>
               {cf.beginningBalance.map((v, i) => (
                 <td key={i} className="px-2 py-1.5 text-right">{fmt(v)}</td>
@@ -107,14 +107,14 @@ export function CashFlowTable({ data }: { data: FinanceData }) {
               ))}
               <td className="px-2 py-1.5 text-right">{fmt(yearOut)}</td>
             </tr>
-            <tr className="border-t-2 border-slate-300 bg-blue-50 font-bold text-blue-900">
+            <tr className="border-t-2 border-[#dcdde3] bg-[#f4f7fb] font-bold text-[#192537]">
               <td className="px-2 py-1.5 text-left">Чистый денежный поток</td>
               {cf.netCashFlow.map((v, i) => (
                 <td key={i} className="px-2 py-1.5 text-right">{fmt(v)}</td>
               ))}
               <td className="px-2 py-1.5 text-right">{fmt(yearNet)}</td>
             </tr>
-            <tr className="bg-blue-50 font-bold text-blue-900">
+            <tr className="bg-[#f4f7fb] font-bold text-[#192537]">
               <td className="px-2 py-1.5 text-left">Остаток на конец периода</td>
               {cf.endingBalance.map((v, i) => (
                 <td key={i} className="px-2 py-1.5 text-right">{fmt(v)}</td>
@@ -133,10 +133,10 @@ function Tile({ label, value, accent }: { label: string; value: string; accent: 
   const cls = {
     emerald: "border-emerald-100 bg-emerald-50 text-emerald-900",
     rose: "border-rose-100 bg-rose-50 text-rose-900",
-    blue: "border-blue-100 bg-blue-50 text-blue-900",
+    blue: "border-[#dcdde3] bg-[#f4f7fb] text-[#192537]",
   }[accent];
   return (
-    <div className={`rounded-xl border ${cls} p-3`}>
+    <div className={`rounded-lg border ${cls} p-3 shadow-[0_12px_28px_rgba(25,37,55,0.05)]`}>
       <div className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</div>
       <div className="mt-1 text-lg font-semibold tabular-nums">{value} ₸</div>
     </div>
