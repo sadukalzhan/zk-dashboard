@@ -182,7 +182,7 @@ function cell(row: SheetGrid[number], headers: Map<string, number>, names: strin
 }
 
 function text(value: unknown): string {
-  return String(value ?? "").trim();
+  return repairMojibake(String(value ?? "")).trim();
 }
 
 function number(value: unknown): number {
@@ -203,4 +203,14 @@ function monthNumber(month: string): number {
 
 function normalizeKey(value: string): string {
   return value.toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]/g, "");
+}
+
+function repairMojibake(value: string): string {
+  if (!/[ÐÑ]/.test(value)) return value;
+  try {
+    const repaired = Buffer.from(value, "latin1").toString("utf-8");
+    return repaired.includes("�") ? value : repaired;
+  } catch {
+    return value;
+  }
 }
