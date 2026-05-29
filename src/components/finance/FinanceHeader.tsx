@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { BarChart3, Factory, RefreshCw, Settings } from "lucide-react";
+import { BarChart3, Factory, Package, RefreshCw, Settings } from "lucide-react";
 
 type Props = {
   year: number;
@@ -64,6 +64,13 @@ export function FinanceHeader({ year, monthIndex, availableYears }: Props) {
           >
             <BarChart3 className="h-4 w-4" />
             Финансы
+          </Link>
+          <Link
+            href="/finished-products"
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-[#4b6b95] transition hover:text-[#192537]"
+          >
+            <Package className="h-4 w-4" />
+            Готовые продукции
           </Link>
         </nav>
 
