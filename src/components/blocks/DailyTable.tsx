@@ -39,7 +39,7 @@ export function DailyTable({ data }: { data: LineMonthData }) {
               key={f}
               onClick={() => setFilter(f)}
               className={`rounded-md px-2 py-1 text-xs ${
-                filter === f ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                filter === f ? "bg-[#192537] text-white" : "bg-[#eef2f6] text-[#4b6b95] hover:bg-[#dcdde3]"
               }`}
             >
               {f === "all" ? "Все смены" : f === "day" ? "Только день" : "Только ночь"}
@@ -49,8 +49,8 @@ export function DailyTable({ data }: { data: LineMonthData }) {
       }
     >
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <table className="min-w-full divide-y divide-[#dcdde3] text-sm">
+          <thead className="bg-[#f4f7fb] text-xs uppercase text-[#6f8aac]">
             <tr>
               <th className="px-3 py-2 text-left">Дата</th>
               <th className="px-3 py-2 text-left">Смена</th>
@@ -62,7 +62,7 @@ export function DailyTable({ data }: { data: LineMonthData }) {
               <th className="px-3 py-2 text-right">Простои, мин</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-[#e7ebf0]">
             {rows.map((s) => {
               const down = s.press.downMin + s.lg.downMin + s.kiln.downMin;
               return (
@@ -79,7 +79,7 @@ export function DailyTable({ data }: { data: LineMonthData }) {
               );
             })}
           </tbody>
-          <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+          <tfoot className="border-t-2 border-[#dcdde3] bg-[#f4f7fb]">
             <tr>
               <td className="px-3 py-2 font-semibold" colSpan={2}>Итого</td>
               <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatNumber(totals.press, { decimals: 1 })}</td>
