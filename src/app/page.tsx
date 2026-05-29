@@ -38,9 +38,9 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   return (
     <>
       <Header line={line} year={year} month={month} compare={compare} availableMonths={months} />
-      <main className="mx-auto max-w-screen-2xl space-y-4 px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-screen-2xl space-y-5 px-4 py-6 sm:px-6">
         {noData && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+          <div className="rounded-lg border border-[#f4c7a8] bg-[#fff4ed] p-6 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">
             <h2 className="text-base font-semibold text-amber-900">Источники данных не настроены</h2>
             <p className="mt-2 text-sm text-amber-900/80">
               Чтобы увидеть данные, добавьте ссылки на Google Sheets для каждой линии и месяца в{" "}
@@ -50,7 +50,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
         )}
 
         {primary.errors.length > 0 && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
             {primary.errors.map((e, i) => (
               <div key={i}>{e}</div>
             ))}
@@ -58,7 +58,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
         )}
 
         <div className="flex items-baseline justify-between gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">
+          <h1 className="text-2xl font-semibold text-[#192537]">
             {compare
               ? `Сравнение линий — ${monthLabel(month)} ${year}`
               : `${LINE_LABELS[line].long} — ${monthLabel(month)} ${year}`}
@@ -68,7 +68,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
               href={primary.source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs font-medium text-[#4b6b95] hover:text-[#ee5c25] hover:underline"
             >
               Исходный Google Sheets ↗
             </a>
@@ -78,12 +78,12 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
         {compare && secondary ? (
           <>
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-4 rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
-                <div className="text-sm font-semibold text-blue-900">{LINE_LABELS[1].long}</div>
+              <div className="space-y-4 rounded-lg border border-[#dcdde3] bg-white p-4 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">
+                <div className="text-sm font-semibold text-[#192537]">{LINE_LABELS[1].long}</div>
                 <KpiCards data={line === 1 ? primary : secondary} />
               </div>
-              <div className="space-y-4 rounded-2xl border border-sky-100 bg-sky-50/30 p-4">
-                <div className="text-sm font-semibold text-sky-900">{LINE_LABELS[2].long}</div>
+              <div className="space-y-4 rounded-lg border border-[#dcdde3] bg-white p-4 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">
+                <div className="text-sm font-semibold text-[#192537]">{LINE_LABELS[2].long}</div>
                 <KpiCards data={line === 2 ? primary : secondary} />
               </div>
             </div>
@@ -107,7 +107,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           </>
         )}
       </main>
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-[#dcdde3] bg-[#eef2f6] py-4 text-center text-xs text-[#6f8aac]">
         ТОО Зерде-Керамика Актобе · ЗК-Дашборд · {new Date().getFullYear()}
       </footer>
     </>
