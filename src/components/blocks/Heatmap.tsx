@@ -46,7 +46,7 @@ export function Heatmap({ data }: { data: LineMonthData }) {
   const maxValue = Math.max(1, ...cells.flatMap((c) => [c.dayMin, c.nightMin]));
 
   const colorFor = (v: number) => {
-    if (v <= 0) return "bg-slate-50";
+    if (v <= 0) return "bg-[#f4f7fb]";
     const ratio = Math.min(1, v / maxValue);
     if (ratio < 0.15) return "bg-rose-100";
     if (ratio < 0.3) return "bg-rose-200";
@@ -67,8 +67,8 @@ export function Heatmap({ data }: { data: LineMonthData }) {
               onClick={() => setSelected(a.area)}
               className={`rounded-md px-2 py-1 text-xs ${
                 selected === a.area
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  ? "bg-[#192537] text-white"
+                  : "bg-[#eef2f6] text-[#4b6b95] hover:bg-[#dcdde3]"
               }`}
             >
               {a.label}
