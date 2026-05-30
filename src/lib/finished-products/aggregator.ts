@@ -55,6 +55,31 @@ export type InventoryView = {
   totalFiltered: number;
 };
 
+export type MovementTableFilters = {
+  brand?: string;
+  design?: string;
+  format?: "all" | "60" | "120";
+  minSale?: number;
+  saleAfterMonths?: number;
+  page?: number;
+};
+
+export type MovementTableRow = MovementRow & {
+  saleDelayMonths: number | null;
+};
+
+export type MovementTableView = {
+  items: MovementTableRow[];
+  filteredItems: MovementTableRow[];
+  pageItems: MovementTableRow[];
+  brands: string[];
+  designs: string[];
+  formats: FinishedFormat[];
+  page: number;
+  totalPages: number;
+  totalFiltered: number;
+};
+
 export function invalidateFinishedProductsCache(): void {
   cache.clear();
   invalidateFinishedProductsSheetsCache();
@@ -122,6 +147,41 @@ export function buildInventoryView(items: InventoryItem[], filters: InventoryFil
       overproductionPositions: filteredItems.filter((item) => item.overproductionCount > 0).length,
       excessProduction: sum(filteredItems, "excessProduction"),
     },
+    page,
+    totalPages,
+    totalFiltered,
+  };
+}
+
+export function buildMovementTableView(rows: MovementRow[], filters: MovementTableFilters): MovementTableView {
+  const items = withSaleDelay(rows);
+  const brands = unique(items.map((item) => item.brand));
+  const designs = unique(items.map((item) => item.design));
+  const formats = [...new Set(items.map((item) => item.format))].sort((a, b) => a - b);
+
+  const filteredItems = items.filter((item) => {
+    if (filters.brand && filters.brand !== "all" && item.brand !== filters.brand) return false;
+    if (filters.design && filters.design !== "all" && item.design !== filters.design) return false;
+    if (filters.format && filters.format !== "all" && String(item.format) !== filters.format) return false;
+    if (filters.minSale !== undefined && item.sold <= filters.minSale) return false;
+    if (filters.saleAfterMonths !== undefined) {
+      if (item.sold <= 0 || item.saleDelayMonths === null || item.saleDelayMonths < filters.saleAfterMonths) return false;
+    }
+    return true;
+  });
+
+  const totalFiltered = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / 50));
+  const page = Math.min(Math.max(filters.page ?? 1, 1), totalPages);
+  const pageItems = filteredItems.slice((page - 1) * 50, page * 50);
+
+  return {
+    items,
+    filteredItems,
+    pageItems,
+    brands,
+    designs,
+    formats,
     page,
     totalPages,
     totalFiltered,
@@ -235,6 +295,29 @@ function buildInventory(rows: MovementRow[]): InventoryItem[] {
   return items.sort((a, b) => b.currentBalance - a.currentBalance);
 }
 
+function withSaleDelay(rows: MovementRow[]): MovementTableRow[] {
+  const firstProduction = new Map<string, number>();
+  const sorted = [...rows].sort(compareMovement);
+
+  for (const row of sorted) {
+    if (row.produced <= 0) continue;
+    const key = gradeKey(row);
+    if (!firstProduction.has(key)) firstProduction.set(key, monthIndex(row));
+  }
+
+  return rows.map((row) => {
+    const firstMonth = firstProduction.get(gradeKey(row));
+    return {
+      ...row,
+      saleDelayMonths: row.sold > 0 && firstMonth !== undefined ? monthIndex(row) - firstMonth : null,
+    };
+  });
+}
+
+function monthIndex(row: Pick<MovementRow, "year" | "monthNumber">): number {
+  return row.year * 12 + row.monthNumber;
+}
+
 function statusFor(item: InventoryItem): InventoryStatus {
   if (item.overproductionCount >= 5 && item.currentBalance > 1000) return "critical";
   if (item.overproductionCount > 0) return "excess";
@@ -282,6 +365,10 @@ function compareValue(a: unknown, b: unknown, dir: "asc" | "desc"): number {
   const multiplier = dir === "asc" ? 1 : -1;
   if (typeof a === "number" && typeof b === "number") return (a - b) * multiplier;
   return String(a ?? "").localeCompare(String(b ?? ""), "ru") * multiplier;
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru"));
 }
 
 function normalize(value: string): string {

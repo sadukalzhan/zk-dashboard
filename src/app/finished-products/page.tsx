@@ -1,8 +1,7 @@
-import { InventoryTable } from "@/components/finished-products/InventoryTable";
+import { MovementBalanceTable } from "@/components/finished-products/MovementBalanceTable";
 import { SalesDashboard } from "@/components/finished-products/SalesDashboard";
 import { FinishedProductsHeader } from "@/components/finished-products/FinishedProductsHeader";
-import { getFinishedProductsData, type InventoryFilters } from "@/lib/finished-products/aggregator";
-import type { InventoryItem, InventoryStatus } from "@/lib/types";
+import { getFinishedProductsData, type MovementTableFilters } from "@/lib/finished-products/aggregator";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +40,7 @@ export default async function FinishedProductsPage({ searchParams }: { searchPar
           <div className="h-px flex-1 bg-[#dcdde3]" />
         </div>
 
-        <InventoryTable items={data.inventory} filters={filters} />
+        <MovementBalanceTable rows={data.movement} filters={filters} />
       </main>
       <footer className="border-t border-[#dcdde3] bg-[#eef2f6] py-4 text-center text-xs text-[#6f8aac]">
         © {new Date().getFullYear()} ТОО «Зерде-Керамика Актобе»
@@ -50,39 +49,26 @@ export default async function FinishedProductsPage({ searchParams }: { searchPar
   );
 }
 
-function parseFilters(sp: Record<string, string | string[] | undefined>): InventoryFilters {
+function parseFilters(sp: Record<string, string | string[] | undefined>): MovementTableFilters {
   const value = (key: string) => {
     const raw = sp[key];
     return Array.isArray(raw) ? raw[0] : raw;
   };
-  const sort = value("sort");
-  const status = value("status");
   const format = value("format");
+  const minSale = positiveNumber(value("minSale"));
+  const saleAfterMonths = positiveNumber(value("saleAfterMonths"));
   return {
     brand: value("brand") || "all",
+    design: value("design") || "all",
     format: format === "60" || format === "120" ? format : "all",
-    status: isStatus(status) ? status : "all",
-    search: value("search") ?? "",
-    onlyOverproduction: value("onlyOverproduction") === "1",
-    sort: isSort(sort) ? sort : "currentBalance",
-    dir: value("dir") === "asc" ? "asc" : "desc",
+    minSale,
+    saleAfterMonths,
     page: Math.max(1, Number(value("page") ?? 1) || 1),
   };
 }
 
-function isStatus(value: unknown): value is InventoryStatus | "all" {
-  return value === "all" || value === "critical" || value === "excess" || value === "stale" || value === "ok";
-}
-
-function isSort(value: unknown): value is keyof InventoryItem {
-  return (
-    value === "brand" ||
-    value === "design" ||
-    value === "format" ||
-    value === "currentBalance" ||
-    value === "lastSale" ||
-    value === "overproductionCount" ||
-    value === "excessProduction" ||
-    value === "status"
-  );
+function positiveNumber(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
