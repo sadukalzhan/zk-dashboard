@@ -163,7 +163,7 @@ export function buildMovementTableView(rows: MovementRow[], filters: MovementTab
   const designsByBrand = Object.fromEntries(
     brands.map((brand) => [brand, unique(items.filter((item) => item.brand === brand).map((item) => item.design))]),
   );
-  const formats = [...new Set(items.map((item) => item.format))].sort((a, b) => a - b);
+  const formats: FinishedFormat[] = [60, 120];
 
   const filteredItems = items.filter((item) => {
     if (filters.brand && filters.brand !== "all" && item.brand !== filters.brand) return false;
