@@ -65,7 +65,9 @@ export type MovementTableFilters = {
 };
 
 export type MovementTableRow = MovementRow & {
+  totalSales: number;
   saleDelayMonths: number | null;
+  displayColor: string;
 };
 
 export type MovementTableView = {
@@ -74,6 +76,7 @@ export type MovementTableView = {
   pageItems: MovementTableRow[];
   brands: string[];
   designs: string[];
+  designsByBrand: Record<string, string[]>;
   formats: FinishedFormat[];
   page: number;
   totalPages: number;
@@ -157,15 +160,18 @@ export function buildMovementTableView(rows: MovementRow[], filters: MovementTab
   const items = withSaleDelay(rows);
   const brands = unique(items.map((item) => item.brand));
   const designs = unique(items.map((item) => item.design));
+  const designsByBrand = Object.fromEntries(
+    brands.map((brand) => [brand, unique(items.filter((item) => item.brand === brand).map((item) => item.design))]),
+  );
   const formats = [...new Set(items.map((item) => item.format))].sort((a, b) => a - b);
 
   const filteredItems = items.filter((item) => {
     if (filters.brand && filters.brand !== "all" && item.brand !== filters.brand) return false;
     if (filters.design && filters.design !== "all" && item.design !== filters.design) return false;
     if (filters.format && filters.format !== "all" && String(item.format) !== filters.format) return false;
-    if (filters.minSale !== undefined && item.sold <= filters.minSale) return false;
+    if (filters.minSale !== undefined && item.totalSales <= filters.minSale) return false;
     if (filters.saleAfterMonths !== undefined) {
-      if (item.sold <= 0 || item.saleDelayMonths === null || item.saleDelayMonths < filters.saleAfterMonths) return false;
+      if (item.saleDelayMonths === null || item.saleDelayMonths < filters.saleAfterMonths) return false;
     }
     return true;
   });
@@ -181,6 +187,7 @@ export function buildMovementTableView(rows: MovementRow[], filters: MovementTab
     pageItems,
     brands,
     designs,
+    designsByBrand,
     formats,
     page,
     totalPages,
@@ -296,20 +303,30 @@ function buildInventory(rows: MovementRow[]): InventoryItem[] {
 }
 
 function withSaleDelay(rows: MovementRow[]): MovementTableRow[] {
-  const firstProduction = new Map<string, number>();
+  const stats = new Map<string, { firstProduction?: number; totalSales: number; maxSaleDelay: number | null }>();
   const sorted = [...rows].sort(compareMovement);
 
   for (const row of sorted) {
-    if (row.produced <= 0) continue;
-    const key = gradeKey(row);
-    if (!firstProduction.has(key)) firstProduction.set(key, monthIndex(row));
+    const key = movementTableKey(row);
+    const item = stats.get(key) ?? { totalSales: 0, maxSaleDelay: null };
+    if (row.produced > 0 && item.firstProduction === undefined) item.firstProduction = monthIndex(row);
+    if (row.sold > 0) {
+      item.totalSales += row.sold;
+      if (item.firstProduction !== undefined) {
+        const delay = monthIndex(row) - item.firstProduction;
+        item.maxSaleDelay = item.maxSaleDelay === null ? delay : Math.max(item.maxSaleDelay, delay);
+      }
+    }
+    stats.set(key, item);
   }
 
   return rows.map((row) => {
-    const firstMonth = firstProduction.get(gradeKey(row));
+    const item = stats.get(movementTableKey(row));
     return {
       ...row,
-      saleDelayMonths: row.sold > 0 && firstMonth !== undefined ? monthIndex(row) - firstMonth : null,
+      totalSales: item?.totalSales ?? 0,
+      saleDelayMonths: item?.maxSaleDelay ?? null,
+      displayColor: row.rowColor || fallbackRowColor(row),
     };
   });
 }
@@ -344,6 +361,10 @@ function designKey(row: MovementRow): string {
   return [row.brand, row.design, row.format].join("\u0001");
 }
 
+function movementTableKey(row: MovementRow): string {
+  return [row.brand, row.design, row.format].join("\u0001");
+}
+
 function groupSum<T>(rows: T[], getKey: (row: T) => string, valueKey: keyof T): Map<string, number> {
   const map = new Map<string, number>();
   for (const row of rows) {
@@ -369,6 +390,13 @@ function compareValue(a: unknown, b: unknown, dir: "asc" | "desc"): number {
 
 function unique(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+function fallbackRowColor(row: MovementRow): string {
+  const palette = ["#cfe2f3", "#ead1dc", "#d9ead3", "#fff2cc", "#b6d7a8", "#f4cccc"];
+  let hash = 0;
+  for (const char of `${row.brand}|${row.design}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return palette[hash % palette.length];
 }
 
 function normalize(value: string): string {

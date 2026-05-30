@@ -55,8 +55,8 @@ function parseFilters(sp: Record<string, string | string[] | undefined>): Moveme
     return Array.isArray(raw) ? raw[0] : raw;
   };
   const format = value("format");
-  const minSale = positiveNumber(value("minSale"));
-  const saleAfterMonths = positiveNumber(value("saleAfterMonths"));
+  const minSale = positiveNumber(value("minSale"), 0);
+  const saleAfterMonths = positiveNumber(value("saleAfterMonths"), 1);
   return {
     brand: value("brand") || "all",
     design: value("design") || "all",
@@ -67,8 +67,8 @@ function parseFilters(sp: Record<string, string | string[] | undefined>): Moveme
   };
 }
 
-function positiveNumber(value: string | undefined): number | undefined {
+function positiveNumber(value: string | undefined, min: number): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  return Number.isFinite(parsed) && parsed >= min ? parsed : undefined;
 }

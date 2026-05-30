@@ -107,14 +107,32 @@ export async function fetchSheet(sheetName: string, range = "A:Z"): Promise<Shee
   });
 }
 
+async function fetchSheetRowBackgrounds(sheetName: string, rowCount: number): Promise<string[]> {
+  const cacheKey = `sheet-colors:${spreadsheetId()}:${sheetName}:${rowCount}`;
+  return cached(cacheKey, async () => {
+    const client = await sheetsClient();
+    const resp = await client.spreadsheets.get({
+      spreadsheetId: spreadsheetId(),
+      ranges: [`'${sheetName.replace(/'/g, "''")}'!A1:A${Math.max(rowCount, 1)}`],
+      includeGridData: true,
+      fields: "sheets(data(rowData(values(effectiveFormat(backgroundColor,backgroundColorStyle)))))",
+    });
+
+    const rows = resp.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
+    return rows.map((row) => backgroundToHex(row.values?.[0]?.effectiveFormat));
+  });
+}
+
 export async function getStructuredData(): Promise<SaleRow[]> {
   const rows = await fetchSheet("Structured Data");
   return parseStructuredData(rows);
 }
 
 export async function getMovementData(): Promise<MovementRow[]> {
-  const rows = await fetchSheet("Отчет 3 - Движение");
-  return parseMovementData(rows);
+  const sheetName = "Отчет 3 - Движение";
+  const rows = await fetchSheet(sheetName);
+  const rowColors = await fetchSheetRowBackgrounds(sheetName, rows.length);
+  return parseMovementData(rows, rowColors);
 }
 
 function parseStructuredData(rows: SheetGrid): SaleRow[] {
@@ -139,10 +157,10 @@ function parseStructuredData(rows: SheetGrid): SaleRow[] {
     .filter((row) => row.brand || row.design || row.quantity);
 }
 
-function parseMovementData(rows: SheetGrid): MovementRow[] {
+function parseMovementData(rows: SheetGrid, rowColors: string[] = []): MovementRow[] {
   const { headers, body } = splitSheet(rows);
   return body
-    .map((row) => {
+    .map((row, index) => {
       const month = text(cell(row, headers, ["месяц", "month"]));
       return {
         brand: text(cell(row, headers, ["бренд", "brand"])),
@@ -155,6 +173,7 @@ function parseMovementData(rows: SheetGrid): MovementRow[] {
         produced: number(cell(row, headers, ["производство", "made", "produced"])),
         sold: number(cell(row, headers, ["продажа", "sale", "sold"])),
         balance: number(cell(row, headers, ["остаток", "balance"])),
+        rowColor: rowColors[index + 1],
       };
     })
     .filter((row) => row.brand || row.design || row.balance || row.produced || row.sold);
@@ -195,6 +214,21 @@ function number(value: unknown): number {
 function parseFormat(value: unknown): 60 | 120 {
   const raw = text(value);
   return raw.includes("120") ? 120 : 60;
+}
+
+function backgroundToHex(format: sheets_v4.Schema$CellFormat | undefined): string {
+  const color = format?.backgroundColorStyle?.rgbColor ?? format?.backgroundColor;
+  if (!color) return "";
+
+  const red = color.red ?? 0;
+  const green = color.green ?? 0;
+  const blue = color.blue ?? 0;
+  const alpha = color.alpha ?? 1;
+  if (alpha === 0) return "";
+  if (red > 0.98 && green > 0.98 && blue > 0.98) return "";
+
+  const channel = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, "0");
+  return `#${channel(red)}${channel(green)}${channel(blue)}`;
 }
 
 function monthNumber(month: string): number {

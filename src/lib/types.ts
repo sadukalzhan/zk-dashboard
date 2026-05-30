@@ -261,6 +261,7 @@ export type MovementRow = {
   produced: number;
   sold: number;
   balance: number;
+  rowColor?: string;
 };
 
 export type InventoryStatus = "critical" | "excess" | "stale" | "ok";

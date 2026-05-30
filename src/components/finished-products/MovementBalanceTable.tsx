@@ -20,6 +20,7 @@ export function MovementBalanceTable({ rows, filters }: Props) {
     <section id="balance-table" className="space-y-4">
       <Card title="Таблица остатков">
         <Filters view={view} filters={filters} />
+        <DesignDropdownScript view={view} />
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full divide-y divide-[#dcdde3] text-sm">
             <thead className="bg-[#f4f7fb] text-xs uppercase text-[#6f8aac]">
@@ -46,7 +47,8 @@ export function MovementBalanceTable({ rows, filters }: Props) {
                 view.pageItems.map((item, index) => (
                   <tr
                     key={`${item.brand}-${item.design}-${item.grade}-${item.format}-${item.year}-${item.month}-${index}`}
-                    className="text-[#192537] hover:bg-[#f4f7fb]"
+                    className="text-[#192537]"
+                    style={{ backgroundColor: item.displayColor }}
                   >
                     <td className="px-3 py-2 font-medium">{item.brand}</td>
                     <td className="min-w-56 px-3 py-2">{item.design}</td>
@@ -74,7 +76,7 @@ function Filters({ view, filters }: { view: MovementTableView; filters: Movement
     <form className="grid grid-cols-1 gap-3 rounded-lg border border-[#dcdde3] bg-[#f4f7fb] p-3 md:grid-cols-6" action="/finished-products#balance-table">
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-[#6f8aac]">Выберите Бренд</span>
-        <select name="brand" defaultValue={filters.brand ?? "all"} className={inputClass}>
+        <select id="balance-brand" name="brand" defaultValue={filters.brand ?? "all"} className={inputClass}>
           <option value="all">-- Все Бренды --</option>
           {view.brands.map((brand) => (
             <option key={brand} value={brand}>{brand}</option>
@@ -83,7 +85,7 @@ function Filters({ view, filters }: { view: MovementTableView; filters: Movement
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-[#6f8aac]">Выберите Дизайн</span>
-        <select name="design" defaultValue={filters.design ?? "all"} className={inputClass}>
+        <select id="balance-design" name="design" defaultValue={filters.design ?? "all"} className={inputClass}>
           <option value="all">-- Все Дизайны --</option>
           {view.designs.map((design) => (
             <option key={design} value={design}>{design}</option>
@@ -132,6 +134,45 @@ function Filters({ view, filters }: { view: MovementTableView; filters: Movement
         </Link>
       </div>
     </form>
+  );
+}
+
+function DesignDropdownScript({ view }: { view: MovementTableView }) {
+  const payload = JSON.stringify({
+    allDesigns: view.designs,
+    designsByBrand: view.designsByBrand,
+  }).replace(/</g, "\\u003c");
+
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          (() => {
+            const data = ${payload};
+            const brandSelect = document.getElementById("balance-brand");
+            const designSelect = document.getElementById("balance-design");
+            if (!brandSelect || !designSelect) return;
+
+            const fillDesigns = () => {
+              const selected = designSelect.value;
+              const brand = brandSelect.value;
+              const designs = brand && brand !== "all" ? (data.designsByBrand[brand] || []) : data.allDesigns;
+              designSelect.innerHTML = '<option value="all">-- Все Дизайны --</option>';
+              for (const design of designs) {
+                const option = document.createElement("option");
+                option.value = design;
+                option.textContent = design;
+                designSelect.appendChild(option);
+              }
+              if (designs.includes(selected)) designSelect.value = selected;
+            };
+
+            brandSelect.addEventListener("change", fillDesigns);
+            fillDesigns();
+          })();
+        `,
+      }}
+    />
   );
 }
 
