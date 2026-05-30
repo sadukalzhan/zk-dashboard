@@ -13,6 +13,8 @@ type MovementTableFilters = {
   page?: number;
 };
 
+type FormatFilter = NonNullable<MovementTableFilters["format"]>;
+
 type MovementTableRow = MovementRow & {
   totalSales: number;
   saleDelayMonths: number | null;
@@ -40,7 +42,7 @@ type Props = {
 export function MovementBalanceTable({ rows, filters }: Props) {
   const [brand, setBrand] = useState(filters.brand ?? "all");
   const [design, setDesign] = useState(filters.design ?? "all");
-  const [format, setFormat] = useState(filters.format ?? "all");
+  const [format, setFormat] = useState<FormatFilter>(filters.format ?? "all");
   const [minSale, setMinSale] = useState(filters.minSale?.toString() ?? "");
   const [saleAfterMonths, setSaleAfterMonths] = useState(filters.saleAfterMonths?.toString() ?? "");
   const [page, setPage] = useState(filters.page ?? 1);
@@ -177,7 +179,7 @@ function Filters({
   availableDesigns: string[];
   onBrandChange: (value: string) => void;
   onDesignChange: (value: string) => void;
-  onFormatChange: (value: string) => void;
+  onFormatChange: (value: FormatFilter) => void;
   onMinSaleChange: (value: string) => void;
   onSaleAfterMonthsChange: (value: string) => void;
   onReset: () => void;
@@ -204,7 +206,7 @@ function Filters({
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-[#6f8aac]">Выберите Формат</span>
-        <select value={format} onChange={(event) => onFormatChange(event.target.value)} className={inputClass}>
+        <select value={format} onChange={(event) => onFormatChange(parseFormatFilter(event.target.value))} className={inputClass}>
           <option value="all">-- Все Форматы --</option>
           {view.formats.map((item) => (
             <option key={item} value={String(item)}>{item === 120 ? "120x60" : "60x60"}</option>
@@ -275,6 +277,10 @@ function parseOptionalNumber(value: string, min: number): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= min ? parsed : undefined;
+}
+
+function parseFormatFilter(value: string): FormatFilter {
+  return value === "60" || value === "120" ? value : "all";
 }
 
 function buildMovementTableView(rows: MovementRow[], filters: MovementTableFilters): MovementTableView {
