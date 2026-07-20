@@ -284,7 +284,8 @@ export type FinishedProductsDashboard = {
     leadingBrand: string;
     topDesign: string;
   };
-  monthlySales: Array<{ month: string; "2023": number; "2024": number; "2025": number }>;
+  years: number[];
+  monthlySales: Array<{ month: string; [year: string]: string | number }>;
   brandShare: Array<{ brand: string; sales: number; pct: number }>;
   formatSplit: Array<{ format: string; sales: number; made: number }>;
   topDesigns: Array<{ design: string; sales: number }>;

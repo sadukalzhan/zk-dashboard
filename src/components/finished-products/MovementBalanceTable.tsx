@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, type UIEvent } from "react";
 import { Card } from "@/components/Card";
 import type { FinishedFormat, MovementRow } from "@/lib/types";
 
@@ -22,15 +22,11 @@ type MovementTableRow = MovementRow & {
 };
 
 type MovementTableView = {
-  items: MovementTableRow[];
   filteredItems: MovementTableRow[];
-  pageItems: MovementTableRow[];
   brands: string[];
   designs: string[];
   designsByBrand: Record<string, string[]>;
   formats: FinishedFormat[];
-  page: number;
-  totalPages: number;
   totalFiltered: number;
 };
 
@@ -39,13 +35,24 @@ type Props = {
   filters: MovementTableFilters;
 };
 
+// Сколько строк дорисовывать за один шаг прокрутки.
+const SCROLL_BATCH = 100;
+
 export function MovementBalanceTable({ rows, filters }: Props) {
   const [brand, setBrand] = useState(filters.brand ?? "all");
   const [design, setDesign] = useState(filters.design ?? "all");
   const [format, setFormat] = useState<FormatFilter>(filters.format ?? "all");
   const [minSale, setMinSale] = useState(filters.minSale?.toString() ?? "");
   const [saleAfterMonths, setSaleAfterMonths] = useState(filters.saleAfterMonths?.toString() ?? "");
-  const [page, setPage] = useState(filters.page ?? 1);
+  const [visibleCount, setVisibleCount] = useState(SCROLL_BATCH);
+
+  // При смене фильтров начинаем прокрутку заново — сброс состояния во время рендера.
+  const filterKey = `${brand}|${design}|${format}|${minSale}|${saleAfterMonths}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setVisibleCount(SCROLL_BATCH);
+  }
 
   const activeFilters = useMemo<MovementTableFilters>(
     () => ({
@@ -54,15 +61,23 @@ export function MovementBalanceTable({ rows, filters }: Props) {
       format: format === "60" || format === "120" ? format : "all",
       minSale: parseOptionalNumber(minSale, 0),
       saleAfterMonths: parseOptionalNumber(saleAfterMonths, 1),
-      page,
     }),
-    [brand, design, format, minSale, saleAfterMonths, page],
+    [brand, design, format, minSale, saleAfterMonths],
   );
 
   const view = useMemo(() => buildMovementTableView(rows, activeFilters), [rows, activeFilters]);
   const availableDesigns = brand !== "all" ? view.designsByBrand[brand] ?? [] : view.designs;
 
-  const resetPage = () => setPage(1);
+  const visibleItems = view.filteredItems.slice(0, visibleCount);
+  const hasMore = visibleCount < view.totalFiltered;
+
+  const onScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMore) return;
+    const el = event.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 320) {
+      setVisibleCount((count) => Math.min(count + SCROLL_BATCH, view.totalFiltered));
+    }
+  };
 
   return (
     <section id="balance-table" className="space-y-4">
@@ -78,36 +93,22 @@ export function MovementBalanceTable({ rows, filters }: Props) {
           onBrandChange={(value) => {
             setBrand(value);
             setDesign("all");
-            resetPage();
           }}
-          onDesignChange={(value) => {
-            setDesign(value);
-            resetPage();
-          }}
-          onFormatChange={(value) => {
-            setFormat(value);
-            resetPage();
-          }}
-          onMinSaleChange={(value) => {
-            setMinSale(value);
-            resetPage();
-          }}
-          onSaleAfterMonthsChange={(value) => {
-            setSaleAfterMonths(value);
-            resetPage();
-          }}
+          onDesignChange={setDesign}
+          onFormatChange={setFormat}
+          onMinSaleChange={setMinSale}
+          onSaleAfterMonthsChange={setSaleAfterMonths}
           onReset={() => {
             setBrand("all");
             setDesign("all");
             setFormat("all");
             setMinSale("");
             setSaleAfterMonths("");
-            setPage(1);
           }}
         />
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 max-h-[70vh] overflow-auto rounded-lg border border-[#dcdde3]" onScroll={onScroll}>
           <table className="min-w-full divide-y divide-[#dcdde3] text-sm">
-            <thead className="bg-[#f4f7fb] text-xs uppercase text-[#6f8aac]">
+            <thead className="sticky top-0 z-10 bg-[#f4f7fb] text-xs uppercase text-[#6f8aac] shadow-[0_1px_0_#dcdde3]">
               <tr>
                 <Th>Бренд</Th>
                 <Th>Дизайн</Th>
@@ -121,14 +122,14 @@ export function MovementBalanceTable({ rows, filters }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e7ebf0]">
-              {view.pageItems.length === 0 ? (
+              {visibleItems.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-3 py-8 text-center text-sm text-[#6f8aac]">
                     Нет данных по выбранным фильтрам.
                   </td>
                 </tr>
               ) : (
-                view.pageItems.map((item, index) => (
+                visibleItems.map((item, index) => (
                   <tr
                     key={`${item.brand}-${item.design}-${item.grade}-${item.format}-${item.year}-${item.month}-${index}`}
                     className="text-[#192537]"
@@ -149,7 +150,10 @@ export function MovementBalanceTable({ rows, filters }: Props) {
             </tbody>
           </table>
         </div>
-        <Pagination view={view} onPageChange={setPage} />
+        <div className="mt-3 text-sm text-[#6f8aac]">
+          Показано {formatNumber(visibleItems.length)} из {formatNumber(view.totalFiltered)}
+          {hasMore ? " · прокрутите вниз, чтобы увидеть больше" : ""}
+        </div>
       </Card>
     </section>
   );
@@ -246,29 +250,6 @@ function Filters({
   );
 }
 
-function Pagination({ view, onPageChange }: { view: MovementTableView; onPageChange: (page: number) => void }) {
-  return (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[#6f8aac]">
-      <div>
-        Стр. {view.page} из {view.totalPages} | Показано {view.pageItems.length} из {view.totalFiltered}
-      </div>
-      <div className="flex gap-2">
-        <PageButton disabled={view.page <= 1} label="Назад" onClick={() => onPageChange(view.page - 1)} />
-        <PageButton disabled={view.page >= view.totalPages} label="Далее" onClick={() => onPageChange(view.page + 1)} />
-      </div>
-    </div>
-  );
-}
-
-function PageButton({ disabled, label, onClick }: { disabled: boolean; label: string; onClick: () => void }) {
-  if (disabled) return <span className="rounded-lg border border-[#dcdde3] px-3 py-1.5 opacity-40">{label}</span>;
-  return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-[#dcdde3] bg-white px-3 py-1.5 text-[#192537] shadow-sm hover:bg-[#f4f7fb]">
-      {label}
-    </button>
-  );
-}
-
 function Th({ children, align = "left" }: { children: ReactNode; align?: "left" | "right" }) {
   return <th className={`px-3 py-2 font-semibold ${align === "right" ? "text-right" : "text-left"}`}>{children}</th>;
 }
@@ -303,22 +284,13 @@ function buildMovementTableView(rows: MovementRow[], filters: MovementTableFilte
     return true;
   });
 
-  const totalFiltered = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / 50));
-  const page = Math.min(Math.max(filters.page ?? 1, 1), totalPages);
-  const pageItems = filteredItems.slice((page - 1) * 50, page * 50);
-
   return {
-    items,
     filteredItems,
-    pageItems,
     brands,
     designs,
     designsByBrand,
     formats,
-    page,
-    totalPages,
-    totalFiltered,
+    totalFiltered: filteredItems.length,
   };
 }
 
@@ -363,7 +335,7 @@ function compareMovement(a: MovementRow, b: MovementRow): number {
 }
 
 function movementTableKey(row: MovementRow): string {
-  return [row.brand, row.design, row.format].join("\u0001");
+  return [row.brand, row.design, row.format].join("");
 }
 
 function monthIndex(row: Pick<MovementRow, "year" | "monthNumber">): number {

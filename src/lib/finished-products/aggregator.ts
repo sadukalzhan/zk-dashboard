@@ -204,14 +204,23 @@ function buildDashboard(rows: SaleRow[]): FinishedProductsDashboard {
   const totalSales = sum(sales, "quantity");
   const totalMade = sum(made, "quantity");
 
+  // All years present in the data (sales or made), ascending.
+  const years = [...new Set(rows.map((row) => row.year).filter((year) => Number.isFinite(year)))].sort((a, b) => a - b);
+
+  // Sum of sales per (year, month) in a single pass.
+  const salesByYearMonth = new Map<string, number>();
+  for (const row of sales) {
+    const key = `${row.year}-${row.monthNumber}`;
+    salesByYearMonth.set(key, (salesByYearMonth.get(key) ?? 0) + Number(row.quantity ?? 0));
+  }
+
   const monthlySales = MONTH_NAMES.map((month, index) => {
     const monthNumber = index + 1;
-    return {
-      month,
-      "2023": sum(sales.filter((row) => row.year === 2023 && row.monthNumber === monthNumber), "quantity"),
-      "2024": sum(sales.filter((row) => row.year === 2024 && row.monthNumber === monthNumber), "quantity"),
-      "2025": sum(sales.filter((row) => row.year === 2025 && row.monthNumber === monthNumber), "quantity"),
-    };
+    const entry: { month: string; [year: string]: string | number } = { month };
+    for (const year of years) {
+      entry[String(year)] = salesByYearMonth.get(`${year}-${monthNumber}`) ?? 0;
+    }
+    return entry;
   });
 
   const brandShare = [...salesByBrand.entries()]
@@ -230,10 +239,12 @@ function buildDashboard(rows: SaleRow[]): FinishedProductsDashboard {
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 10);
 
-  const yearlyDynamics = [2022, 2023, 2024, 2025].map((year) => ({
+  const salesByYear = groupSum(sales, (row) => String(row.year), "quantity");
+  const madeByYear = groupSum(made, (row) => String(row.year), "quantity");
+  const yearlyDynamics = years.map((year) => ({
     year,
-    sales: sum(sales.filter((row) => row.year === year), "quantity"),
-    made: sum(made.filter((row) => row.year === year), "quantity"),
+    sales: salesByYear.get(String(year)) ?? 0,
+    made: madeByYear.get(String(year)) ?? 0,
   }));
 
   return {
@@ -243,6 +254,7 @@ function buildDashboard(rows: SaleRow[]): FinishedProductsDashboard {
       leadingBrand: topEntry(salesByBrand),
       topDesign: topEntry(salesByDesign),
     },
+    years,
     monthlySales,
     brandShare,
     formatSplit,

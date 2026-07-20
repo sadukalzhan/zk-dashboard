@@ -22,6 +22,9 @@ import { KpiCard } from "./KpiCard";
 
 const COLORS = ["#192537", "#ee5c25", "#4b6b95", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"];
 
+// Год за годом: от светлого (старые годы) к насыщённому тёмному (последний год выделен).
+const YEAR_COLORS = ["#c3ccd8", "#94a3b8", "#10b981", "#f59e0b", "#ee5c25", "#192537", "#8b5cf6", "#14b8a6"];
+
 export function SalesDashboard({ data }: { data: FinishedProductsDashboard }) {
   return (
     <section className="space-y-5">
@@ -41,9 +44,19 @@ export function SalesDashboard({ data }: { data: FinishedProductsDashboard }) {
               <YAxis tick={{ fontSize: 11 }} tickFormatter={compact} />
               <Tooltip formatter={(value) => formatM2(Number(value))} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="2023" stroke="#4b6b95" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="2024" stroke="#ee5c25" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="2025" stroke="#192537" strokeWidth={3} dot={{ r: 3 }} />
+              {data.years.map((year, index) => {
+                const isLatest = index === data.years.length - 1;
+                return (
+                  <Line
+                    key={year}
+                    type="monotone"
+                    dataKey={String(year)}
+                    stroke={YEAR_COLORS[index % YEAR_COLORS.length]}
+                    strokeWidth={isLatest ? 3 : 2}
+                    dot={{ r: 3 }}
+                  />
+                );
+              })}
             </LineChart>
           </ChartBox>
         </Card>
