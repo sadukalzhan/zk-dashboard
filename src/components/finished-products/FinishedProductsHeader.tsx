@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, RefreshCw, Settings } from "lucide-react";
+import { Factory, Package, RefreshCw, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -35,6 +35,10 @@ export function FinishedProductsHeader() {
         </Link>
 
         <nav className="ml-2 flex rounded-lg border border-[#dcdde3] bg-white p-1 shadow-sm">
+          <Link href="/" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-[#4b6b95] transition hover:text-[#192537]">
+            <Factory className="h-4 w-4" />
+            Производство
+          </Link>
           <Link href="/finished-products" className="flex items-center gap-2 rounded-md bg-[#192537] px-3 py-1.5 text-sm text-white shadow-sm">
             <Package className="h-4 w-4" />
             Готовые продукции
