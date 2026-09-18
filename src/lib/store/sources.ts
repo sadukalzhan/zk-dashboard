@@ -54,14 +54,21 @@ async function writeToFile(sources: SourceEntry[]): Promise<void> {
 export async function listSources(): Promise<SourceEntry[]> {
   const redis = getRedis();
   if (redis) {
-    const data = await redis.get<SourceEntry[]>(KEY);
-    if (data && data.length) return data;
-    // Seed Redis on first run with whatever is bundled in data/sources.json
-    const seed = await readFromFile().catch(() => []);
-    if (seed.length) {
-      await redis.set(KEY, seed).catch(() => undefined);
+    try {
+      const data = await redis.get<SourceEntry[]>(KEY);
+      if (data && data.length) return data;
+      // Seed Redis on first run with whatever is bundled in data/sources.json
+      const seed = await readFromFile().catch(() => []);
+      if (seed.length) {
+        await redis.set(KEY, seed).catch(() => undefined);
+      }
+      return seed;
+    } catch (e: unknown) {
+      // Upstash недоступен (например, база удалена) — не роняем страницу,
+      // а читаем источники из бандл-файла data/sources.json только на чтение.
+      console.error("Upstash недоступен, использую data/sources.json:", e instanceof Error ? e.message : e);
+      return readFromFile().catch(() => []);
     }
-    return seed;
   }
   return readFromFile();
 }
@@ -151,13 +158,18 @@ async function writeFinanceFile(sources: FinanceSourceEntry[]): Promise<void> {
 export async function listFinanceSources(): Promise<FinanceSourceEntry[]> {
   const redis = getRedis();
   if (redis) {
-    const data = await redis.get<FinanceSourceEntry[]>(FINANCE_KEY);
-    if (data && data.length) return data;
-    const seed = await readFinanceFile().catch(() => []);
-    if (seed.length) {
-      await redis.set(FINANCE_KEY, seed).catch(() => undefined);
+    try {
+      const data = await redis.get<FinanceSourceEntry[]>(FINANCE_KEY);
+      if (data && data.length) return data;
+      const seed = await readFinanceFile().catch(() => []);
+      if (seed.length) {
+        await redis.set(FINANCE_KEY, seed).catch(() => undefined);
+      }
+      return seed;
+    } catch (e: unknown) {
+      console.error("Upstash недоступен, использую data/finance-sources.json:", e instanceof Error ? e.message : e);
+      return readFinanceFile().catch(() => []);
     }
-    return seed;
   }
   return readFinanceFile();
 }
