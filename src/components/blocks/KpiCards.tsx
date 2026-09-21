@@ -22,9 +22,9 @@ const ACCENT: Record<NonNullable<KpiCardProps["accent"]>, string> = {
 
 function Card1({ label, value, sub, delta, accent = "blue" }: KpiCardProps) {
   return (
-    <div className={`rounded-lg border ${ACCENT[accent]} p-4 shadow-[0_12px_28px_rgba(25,37,55,0.05)]`}>
+    <div className={`min-w-0 rounded-lg border ${ACCENT[accent]} p-4 shadow-[0_12px_28px_rgba(25,37,55,0.05)]`}>
       <div className="text-xs font-semibold uppercase text-[#6f8aac]">{label}</div>
-      <div className="mt-3 text-2xl font-semibold tabular-nums text-[#192537]">{value}</div>
+      <div className="mt-3 break-words text-xl font-semibold tabular-nums text-[#192537] @sm:text-2xl">{value}</div>
       <div className="mt-2 flex min-h-4 items-center gap-2 text-xs text-[#6f8aac]">
         {sub && <span>{sub}</span>}
         {delta && delta.value !== "—" && (
@@ -54,7 +54,8 @@ export function KpiCards({ data }: { data: LineMonthData }) {
 
   return (
     <Card title="Блок 1 · Ключевые показатели">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="@container">
+      <div className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @3xl:grid-cols-6">
         <Card1
           label="Выход печи"
           value={formatNumber(out, { suffix: "м²" })}
@@ -92,6 +93,7 @@ export function KpiCards({ data }: { data: LineMonthData }) {
           sub={total ? formatPct(((kpi?.defectM2 ?? 0) / total) * 100) : undefined}
           accent="rose"
         />
+      </div>
       </div>
     </Card>
   );

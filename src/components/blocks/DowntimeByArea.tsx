@@ -73,7 +73,7 @@ export function DowntimeByArea({ data }: { data: LineMonthData }) {
           <div className="text-center text-xs text-slate-500">Всего простоев: {formatNumber(grandTotal)} мин</div>
         </div>
 
-        <div className="overflow-x-auto lg:col-span-2">
+        <div className="min-w-0 overflow-x-auto lg:col-span-2">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
@@ -107,7 +107,7 @@ export function DowntimeByArea({ data }: { data: LineMonthData }) {
               <div className="space-y-2">
                 {top10.map((r, i) => (
                   <div key={`${r.area}-${r.label}-${i}`} className="grid grid-cols-[2fr_1fr] items-center gap-3">
-                    <div className="truncate text-sm">
+                    <div className="min-w-0 truncate text-sm">
                       <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: AREA_COLORS[r.area] }} /> {r.label}
                       <span className="ml-2 text-xs text-slate-400">({AREA_LABELS[r.area]})</span>
                     </div>
