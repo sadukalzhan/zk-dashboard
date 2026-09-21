@@ -19,7 +19,9 @@ function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
-  redisClient = new Redis({ url, token });
+  // retry: false — если Upstash недоступен, падаем сразу, а не ждём 5 повторов
+  // с экспоненциальной задержкой (~12 c) перед фолбэком на файл.
+  redisClient = new Redis({ url, token, retry: false });
   return redisClient;
 }
 
@@ -51,7 +53,19 @@ async function writeToFile(sources: SourceEntry[]): Promise<void> {
   }
 }
 
+// Кэш источников в памяти: за один запрос listSources вызывается несколько раз
+// (availableMonths + findSource), плюс экономит поход в Upstash на каждой навигации.
+let sourcesCache: { data: SourceEntry[]; expiresAt: number } | null = null;
+const SOURCES_CACHE_TTL_MS = 60 * 1000;
+
 export async function listSources(): Promise<SourceEntry[]> {
+  if (sourcesCache && sourcesCache.expiresAt > Date.now()) return sourcesCache.data;
+  const data = await loadSources();
+  sourcesCache = { data, expiresAt: Date.now() + SOURCES_CACHE_TTL_MS };
+  return data;
+}
+
+async function loadSources(): Promise<SourceEntry[]> {
   const redis = getRedis();
   if (redis) {
     try {
@@ -74,6 +88,7 @@ export async function listSources(): Promise<SourceEntry[]> {
 }
 
 export async function saveAllSources(sources: SourceEntry[]): Promise<void> {
+  sourcesCache = null;
   const redis = getRedis();
   if (redis) {
     await redis.set(KEY, sources);
@@ -155,7 +170,16 @@ async function writeFinanceFile(sources: FinanceSourceEntry[]): Promise<void> {
   }
 }
 
+let financeSourcesCache: { data: FinanceSourceEntry[]; expiresAt: number } | null = null;
+
 export async function listFinanceSources(): Promise<FinanceSourceEntry[]> {
+  if (financeSourcesCache && financeSourcesCache.expiresAt > Date.now()) return financeSourcesCache.data;
+  const data = await loadFinanceSources();
+  financeSourcesCache = { data, expiresAt: Date.now() + SOURCES_CACHE_TTL_MS };
+  return data;
+}
+
+async function loadFinanceSources(): Promise<FinanceSourceEntry[]> {
   const redis = getRedis();
   if (redis) {
     try {
@@ -175,6 +199,7 @@ export async function listFinanceSources(): Promise<FinanceSourceEntry[]> {
 }
 
 async function saveAllFinanceSources(sources: FinanceSourceEntry[]): Promise<void> {
+  financeSourcesCache = null;
   const redis = getRedis();
   if (redis) {
     await redis.set(FINANCE_KEY, sources);
