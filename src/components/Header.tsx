@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { LINE_LABELS, MONTH_NAMES_RU } from "@/lib/line-mapping";
+import { LINE_LABELS, LINE_NUMBERS, MONTH_NAMES_RU } from "@/lib/line-mapping";
+import type { LineNumber, MonthOption } from "@/lib/types";
 import { useState, useTransition } from "react";
 import { Factory, Package, RefreshCw, Settings } from "lucide-react";
 
 type Props = {
-  line: 1 | 2;
+  line: LineNumber;
   year: number;
   month: number;
   compare: boolean;
-  availableMonths: Array<{ year: number; month: number; hasLine1: boolean; hasLine2: boolean }>;
+  availableMonths: MonthOption[];
 };
 
 export function Header({ line, year, month, compare, availableMonths }: Props) {
@@ -100,8 +101,9 @@ export function Header({ line, year, month, compare, availableMonths }: Props) {
               onChange={(e) => updateParams({ line: e.target.value })}
               className="rounded-lg border border-[#dcdde3] bg-white px-3 py-2 text-sm text-[#192537] shadow-sm focus:border-[#4b6b95] focus:outline-none"
             >
-              <option value="1">{LINE_LABELS[1].long}</option>
-              <option value="2">{LINE_LABELS[2].long}</option>
+              {LINE_NUMBERS.map((n) => (
+                <option key={n} value={String(n)}>{LINE_LABELS[n].long}</option>
+              ))}
             </select>
           )}
 
@@ -122,8 +124,7 @@ export function Header({ line, year, month, compare, availableMonths }: Props) {
               availableMonths.map((m) => (
                 <option key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>
                   {MONTH_NAMES_RU[m.month - 1]} {m.year}
-                  {!m.hasLine1 ? " (нет Л1)" : ""}
-                  {!m.hasLine2 ? " (нет Л2)" : ""}
+                  {missingLinesLabel(m.lines)}
                 </option>
               ))
             )}
@@ -155,4 +156,11 @@ export function Header({ line, year, month, compare, availableMonths }: Props) {
       )}
     </header>
   );
+}
+
+// Подсказка в списке месяцев: какие линии за этот месяц не настроены.
+function missingLinesLabel(lines: LineNumber[]): string {
+  const missing = LINE_NUMBERS.filter((n) => !lines.includes(n));
+  if (missing.length === 0) return "";
+  return ` (нет: ${missing.map((n) => LINE_LABELS[n].short).join(", ")})`;
 }

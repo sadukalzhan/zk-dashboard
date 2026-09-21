@@ -5,7 +5,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Redis } from "@upstash/redis";
-import type { FinanceSourceEntry, LineNumber, SourceEntry } from "../types";
+import type { FinanceSourceEntry, LineNumber, MonthOption, SourceEntry } from "../types";
 import { extractSpreadsheetId } from "../sheets/fetcher";
 
 const DATA_FILE = path.join(process.cwd(), "data", "sources.json");
@@ -250,17 +250,16 @@ export async function availableFinanceYears(): Promise<number[]> {
   return [...new Set(all.map((s) => s.year))].sort((a, b) => b - a);
 }
 
-export async function availableMonths(): Promise<Array<{ year: number; month: number; hasLine1: boolean; hasLine2: boolean }>> {
+export async function availableMonths(): Promise<MonthOption[]> {
   const all = await listSources();
-  const map = new Map<string, { year: number; month: number; hasLine1: boolean; hasLine2: boolean }>();
+  const map = new Map<string, MonthOption>();
   for (const s of all) {
     const key = `${s.year}-${s.month}`;
     const existing = map.get(key);
     if (!existing) {
-      map.set(key, { year: s.year, month: s.month, hasLine1: s.line === 1, hasLine2: s.line === 2 });
-    } else {
-      if (s.line === 1) existing.hasLine1 = true;
-      else existing.hasLine2 = true;
+      map.set(key, { year: s.year, month: s.month, lines: [s.line] });
+    } else if (!existing.lines.includes(s.line)) {
+      existing.lines.push(s.line);
     }
   }
   return [...map.values()].sort((a, b) => b.year - a.year || b.month - a.month);

@@ -1,6 +1,7 @@
 // Core types for the ЗК-Дашборд
 
-export type LineNumber = 1 | 2;
+// 1 — Линия 1 (120×60), 2 — Линия 2 (60×60), 3 — Линия 1 (60×60).
+export type LineNumber = 1 | 2 | 3;
 
 export type SourceEntry = {
   id: string;
@@ -15,8 +16,8 @@ export type SourceEntry = {
 export type MonthOption = {
   year: number;
   month: number;
-  hasLine1: boolean;
-  hasLine2: boolean;
+  // Какие линии есть за этот месяц (источник настроен).
+  lines: LineNumber[];
 };
 
 export type CellValue = string | number | Date | null;

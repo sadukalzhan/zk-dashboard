@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLineMonthData, invalidateCache } from "@/lib/sheets/aggregator";
+import { LINE_NUMBERS } from "@/lib/line-mapping";
+import type { LineNumber } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +12,12 @@ export async function GET(req: Request) {
   const month = Number(url.searchParams.get("month"));
   const refresh = url.searchParams.get("refresh") === "1";
 
-  if (![1, 2].includes(line) || !year || !month) {
+  if (!LINE_NUMBERS.includes(line as LineNumber) || !year || !month) {
     return NextResponse.json({ error: "Параметры line/year/month обязательны" }, { status: 400 });
   }
 
   if (refresh) invalidateCache();
 
-  const data = await getLineMonthData(line as 1 | 2, year, month, { force: refresh });
+  const data = await getLineMonthData(line as LineNumber, year, month, { force: refresh });
   return NextResponse.json({ data });
 }

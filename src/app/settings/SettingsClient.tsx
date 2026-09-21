@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceSourceEntry, LineNumber, SourceEntry } from "@/lib/types";
-import { LINE_LABELS, MONTH_NAMES_RU } from "@/lib/line-mapping";
+import { LINE_LABELS, LINE_NUMBERS, MONTH_NAMES_RU } from "@/lib/line-mapping";
 
 type Props = {
   initialAuthed: boolean;
@@ -307,8 +307,9 @@ function SourceForm({ onSubmitted }: { onSubmitted: (s: SourceEntry) => void }) 
             onChange={(e) => setLine(Number(e.target.value) as LineNumber)}
             className="w-full rounded-lg border border-[#dcdde3] px-3 py-2 text-sm text-[#192537] focus:border-[#4b6b95] focus:outline-none"
           >
-            <option value={1}>Линия 1 (ЗК-120/60)</option>
-            <option value={2}>Линия 2 (ЗК-60/60)</option>
+            {LINE_NUMBERS.map((n) => (
+              <option key={n} value={n}>{LINE_LABELS[n].long}</option>
+            ))}
           </select>
         </label>
         <label className="block">

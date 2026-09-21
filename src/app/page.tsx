@@ -4,7 +4,7 @@ import { YearlyTrend } from "@/components/blocks/YearlyTrend";
 import { DowntimeByArea } from "@/components/blocks/DowntimeByArea";
 import { Heatmap } from "@/components/blocks/Heatmap";
 import { Parameters } from "@/components/blocks/Parameters";
-import { LINE_LABELS } from "@/lib/line-mapping";
+import { LINE_LABELS, LINE_NUMBERS } from "@/lib/line-mapping";
 import { getLineMonthData } from "@/lib/sheets/aggregator";
 import { availableMonths } from "@/lib/store/sources";
 import type { LineNumber } from "@/lib/types";
@@ -25,14 +25,21 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   const fallback = months[0] ?? { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
   const year = Number(sp.year ?? fallback.year);
   const month = Number(sp.month ?? fallback.month);
-  const lineParam = Number(sp.line ?? 1);
-  const line: LineNumber = lineParam === 2 ? 2 : 1;
+  const line = parseLine(sp.line);
   const compare = sp.compare === "1";
 
-  const primary = await getLineMonthData(line, year, month);
-  const other: LineNumber = line === 1 ? 2 : 1;
-  const secondary = compare ? await getLineMonthData(other, year, month) : null;
+  // В сравнении грузим все линии, иначе только выбранную.
+  const ids: LineNumber[] = compare ? LINE_NUMBERS : [line];
+  const series = await Promise.all(
+    ids.map(async (id) => ({
+      id,
+      label: LINE_LABELS[id].short,
+      data: await getLineMonthData(id, year, month),
+    })),
+  );
 
+  const primary = series[0].data;
+  const errors = [...new Set(series.flatMap((s) => s.data.errors))];
   const noData = months.length === 0;
 
   return (
@@ -49,9 +56,9 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           </div>
         )}
 
-        {primary.errors.length > 0 && (
+        {errors.length > 0 && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
-            {primary.errors.map((e, i) => (
+            {errors.map((e, i) => (
               <div key={i}>{e}</div>
             ))}
           </div>
@@ -63,7 +70,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
               ? `Сравнение линий — ${monthLabel(month)} ${year}`
               : `${LINE_LABELS[line].long} — ${monthLabel(month)} ${year}`}
           </h1>
-          {primary.source && (
+          {!compare && primary.source && (
             <a
               href={primary.source.url}
               target="_blank"
@@ -75,35 +82,36 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           )}
         </div>
 
-        {compare && secondary ? (
+        {compare ? (
           <>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-4 rounded-lg border border-[#dcdde3] bg-white p-4 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">
-                <div className="text-sm font-semibold text-[#192537]">{LINE_LABELS[1].long}</div>
-                <KpiCards data={line === 1 ? primary : secondary} />
-              </div>
-              <div className="space-y-4 rounded-lg border border-[#dcdde3] bg-white p-4 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">
-                <div className="text-sm font-semibold text-[#192537]">{LINE_LABELS[2].long}</div>
-                <KpiCards data={line === 2 ? primary : secondary} />
-              </div>
+            <div className="grid gap-4 xl:grid-cols-3">
+              {series.map((s) => (
+                <div
+                  key={s.id}
+                  className="min-w-0 space-y-4 rounded-lg border border-[#dcdde3] bg-white p-4 shadow-[0_18px_45px_rgba(25,37,55,0.06)]"
+                >
+                  <div className="text-sm font-semibold text-[#192537]">{LINE_LABELS[s.id].long}</div>
+                  <KpiCards data={s.data} />
+                </div>
+              ))}
             </div>
-            <YearlyTrend
-              primary={line === 1 ? primary : secondary}
-              secondary={line === 1 ? secondary : primary}
-            />
-            <div className="grid gap-4 lg:grid-cols-2">
-              <DowntimeByArea data={line === 1 ? primary : secondary} />
-              <DowntimeByArea data={line === 2 ? primary : secondary} />
+            <YearlyTrend series={series} />
+            <div className="grid gap-4 xl:grid-cols-3">
+              {series.map((s) => (
+                <div key={s.id} className="min-w-0">
+                  <DowntimeByArea data={s.data} />
+                </div>
+              ))}
             </div>
-            <Parameters data={line === 1 ? primary : secondary} compareWith={line === 1 ? secondary : primary} />
+            <Parameters series={series} />
           </>
         ) : (
           <>
             <KpiCards data={primary} />
-            <YearlyTrend primary={primary} />
+            <YearlyTrend series={series} />
             <DowntimeByArea data={primary} />
             <Heatmap data={primary} />
-            <Parameters data={primary} />
+            <Parameters series={series} />
           </>
         )}
       </main>
@@ -112,6 +120,11 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
       </footer>
     </>
   );
+}
+
+function parseLine(raw: string | undefined): LineNumber {
+  const value = Number(raw ?? 1);
+  return LINE_NUMBERS.includes(value as LineNumber) ? (value as LineNumber) : 1;
 }
 
 function monthLabel(m: number): string {
