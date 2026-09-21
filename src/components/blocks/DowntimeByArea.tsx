@@ -55,8 +55,9 @@ export function DowntimeByArea({ data }: { data: LineMonthData }) {
 
   return (
     <Card title="Блок 3 · Анализ простоев по участкам">
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+      <div className="@container">
+      <div className="grid gap-6 @4xl:grid-cols-3">
+        <div className="@4xl:col-span-1">
           <div style={{ width: "100%", height: 240 }}>
             <ResponsiveContainer>
               <PieChart>
@@ -73,7 +74,7 @@ export function DowntimeByArea({ data }: { data: LineMonthData }) {
           <div className="text-center text-xs text-slate-500">Всего простоев: {formatNumber(grandTotal)} мин</div>
         </div>
 
-        <div className="min-w-0 overflow-x-auto lg:col-span-2">
+        <div className="min-w-0 overflow-x-auto @4xl:col-span-2">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
@@ -126,6 +127,7 @@ export function DowntimeByArea({ data }: { data: LineMonthData }) {
             )}
           </div>
         </div>
+      </div>
       </div>
     </Card>
   );
