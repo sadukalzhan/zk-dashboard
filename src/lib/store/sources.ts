@@ -91,11 +91,16 @@ export async function saveAllSources(sources: SourceEntry[]): Promise<void> {
   sourcesCache = null;
   const redis = getRedis();
   if (redis) {
-    await redis.set(KEY, sources);
+    await redis.set(KEY, sources).catch(() => {
+      throw new Error(UPSTASH_UNAVAILABLE);
+    });
     return;
   }
   await writeToFile(sources);
 }
+
+const UPSTASH_UNAVAILABLE =
+  "Хранилище источников (Upstash Redis) недоступно — база удалена или отключена. Сохранение невозможно, пока не подключена новая база Upstash.";
 
 export async function findSource(line: LineNumber, year: number, month: number): Promise<SourceEntry | null> {
   const all = await listSources();
@@ -202,7 +207,9 @@ async function saveAllFinanceSources(sources: FinanceSourceEntry[]): Promise<voi
   financeSourcesCache = null;
   const redis = getRedis();
   if (redis) {
-    await redis.set(FINANCE_KEY, sources);
+    await redis.set(FINANCE_KEY, sources).catch(() => {
+      throw new Error(UPSTASH_UNAVAILABLE);
+    });
     return;
   }
   await writeFinanceFile(sources);

@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 }
 
 const upsertSchema = z.object({
-  line: z.union([z.literal(1), z.literal(2)]),
+  line: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
   url: z.string().url(),
