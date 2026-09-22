@@ -13,6 +13,10 @@ import {
   toStr,
 } from "../../sheet-utils";
 
+// Столбцы между «Итого» и «мех.», которые не являются причинами простоя:
+// время работы оборудования и текстовое описание внеплановой остановки.
+const NON_REASON_COLUMNS = new Set(["время работы", "причина внеплановой остановки"]);
+
 export function parseDowntime(area: DowntimeArea, grid: SheetGrid): AreaDowntime | null {
   if (!grid.length) return null;
 
@@ -34,7 +38,9 @@ export function parseDowntime(area: DowntimeArea, grid: SheetGrid): AreaDowntime
   const reasonCols: Array<{ col: number; label: string }> = [];
   for (let c = totalCol + 1; c < reasonEnd; c++) {
     const label = toStr(grid[headerRow][c]);
-    if (label) reasonCols.push({ col: c, label });
+    if (label && !NON_REASON_COLUMNS.has(label.toLowerCase().replace(/\s+/g, " "))) {
+      reasonCols.push({ col: c, label });
+    }
   }
 
   const days: DowntimeDay[] = [];
