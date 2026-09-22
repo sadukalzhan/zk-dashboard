@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { KpiCards } from "@/components/blocks/KpiCards";
 import { YearlyTrend } from "@/components/blocks/YearlyTrend";
 import { DowntimeByArea } from "@/components/blocks/DowntimeByArea";
+import { DowntimeDetails } from "@/components/blocks/DowntimeDetails";
 import { Heatmap } from "@/components/blocks/Heatmap";
 import { Parameters } from "@/components/blocks/Parameters";
 import { LINE_LABELS, LINE_NUMBERS } from "@/lib/line-mapping";
@@ -111,6 +112,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             <KpiCards data={primary} />
             <YearlyTrend series={series} />
             <DowntimeByArea data={primary} />
+            <DowntimeDetails data={primary} />
             <Heatmap data={primary} />
             <Parameters series={series} />
           </>
