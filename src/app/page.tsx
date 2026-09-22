@@ -7,6 +7,7 @@ import { Parameters } from "@/components/blocks/Parameters";
 import { LINE_LABELS, LINE_NUMBERS } from "@/lib/line-mapping";
 import { getLineMonthData } from "@/lib/sheets/aggregator";
 import { availableMonths } from "@/lib/store/sources";
+import { getSections } from "@/lib/store/sections";
 import type { LineNumber } from "@/lib/types";
 import Link from "next/link";
 
@@ -21,7 +22,7 @@ type SearchParams = Promise<{
 
 export default async function Home({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const months = await availableMonths();
+  const [months, sections] = await Promise.all([availableMonths(), getSections()]);
   const fallback = months[0] ?? { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
   const year = Number(sp.year ?? fallback.year);
   const month = Number(sp.month ?? fallback.month);
@@ -44,7 +45,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
 
   return (
     <>
-      <Header line={line} year={year} month={month} compare={compare} availableMonths={months} />
+      <Header line={line} year={year} month={month} compare={compare} availableMonths={months} sections={sections} />
       <main className="mx-auto max-w-screen-2xl space-y-5 px-4 py-6 sm:px-6">
         {noData && (
           <div className="rounded-lg border border-[#f4c7a8] bg-[#fff4ed] p-6 shadow-[0_18px_45px_rgba(25,37,55,0.06)]">

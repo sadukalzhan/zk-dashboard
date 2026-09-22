@@ -4,26 +4,14 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { Redis } from "@upstash/redis";
 import type { FinanceSourceEntry, LineNumber, MonthOption, SourceEntry } from "../types";
 import { extractSpreadsheetId } from "../sheets/fetcher";
+import { getRedis } from "./redis";
 
 const DATA_FILE = path.join(process.cwd(), "data", "sources.json");
 const FINANCE_DATA_FILE = path.join(process.cwd(), "data", "finance-sources.json");
 const KEY = "zk_dashboard:sources";
 const FINANCE_KEY = "zk_dashboard:finance_sources";
-
-let redisClient: Redis | null = null;
-function getRedis(): Redis | null {
-  if (redisClient) return redisClient;
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-  // retry: false — если Upstash недоступен, падаем сразу, а не ждём 5 повторов
-  // с экспоненциальной задержкой (~12 c) перед фолбэком на файл.
-  redisClient = new Redis({ url, token, retry: false });
-  return redisClient;
-}
 
 async function readFromFile(): Promise<SourceEntry[]> {
   try {

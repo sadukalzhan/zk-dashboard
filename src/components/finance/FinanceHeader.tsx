@@ -3,17 +3,20 @@
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { BarChart3, Factory, Package, RefreshCw, Settings } from "lucide-react";
+import { RefreshCw, Settings } from "lucide-react";
+import type { SectionVisibility } from "@/lib/store/sections";
+import { MainNav } from "../MainNav";
 
 type Props = {
   year: number;
   monthIndex: number;
   availableYears: number[];
+  sections: SectionVisibility;
 };
 
 const MONTH_NAMES = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 
-export function FinanceHeader({ year, monthIndex, availableYears }: Props) {
+export function FinanceHeader({ year, monthIndex, availableYears, sections }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -50,29 +53,7 @@ export function FinanceHeader({ year, monthIndex, availableYears }: Props) {
           </div>
         </Link>
 
-        <nav className="ml-2 flex rounded-lg border border-[#dcdde3] bg-white p-1 shadow-sm">
-          <Link
-            href="/"
-            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-[#4b6b95] transition hover:text-[#192537]"
-          >
-            <Factory className="h-4 w-4" />
-            Производство
-          </Link>
-          <Link
-            href={`/finance?${params.toString()}`}
-            className="flex items-center gap-2 rounded-md bg-[#192537] px-3 py-1.5 text-sm text-white shadow-sm"
-          >
-            <BarChart3 className="h-4 w-4" />
-            Финансы
-          </Link>
-          <Link
-            href="/finished-products"
-            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-[#4b6b95] transition hover:text-[#192537]"
-          >
-            <Package className="h-4 w-4" />
-            Готовые продукции
-          </Link>
-        </nav>
+        <MainNav active="finance" sections={sections} />
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <select

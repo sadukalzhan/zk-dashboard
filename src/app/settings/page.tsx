@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SettingsClient } from "./SettingsClient";
 import { isAuthed } from "@/lib/auth";
 import { listFinanceSources, listSources } from "@/lib/store/sources";
+import { getSections } from "@/lib/store/sections";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function SettingsPage() {
   const authed = await isAuthed();
   const sources = authed ? await listSources() : [];
   const financeSources = authed ? await listFinanceSources() : [];
+  const sections = await getSections();
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
@@ -20,6 +22,7 @@ export default async function SettingsPage() {
         initialAuthed={authed}
         initialSources={sources}
         initialFinanceSources={financeSources}
+        initialSections={sections}
       />
     </main>
   );

@@ -2,19 +2,25 @@ import { MovementBalanceTable } from "@/components/finished-products/MovementBal
 import { SalesDashboard } from "@/components/finished-products/SalesDashboard";
 import { FinishedProductsHeader } from "@/components/finished-products/FinishedProductsHeader";
 import { getFinishedProductsData, type MovementTableFilters } from "@/lib/finished-products/aggregator";
+import { getSections } from "@/lib/store/sections";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function FinishedProductsPage({ searchParams }: { searchParams: SearchParams }) {
+  const sections = await getSections();
+  // Раздел скрыт в панели настроек — отправляем на главную.
+  if (!sections.finishedProducts) redirect("/");
+
   const sp = await searchParams;
   const data = await getFinishedProductsData();
   const filters = parseFilters(sp);
 
   return (
     <>
-      <FinishedProductsHeader />
+      <FinishedProductsHeader sections={sections} />
       <main className="mx-auto max-w-screen-2xl space-y-6 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

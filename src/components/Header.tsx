@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { LINE_LABELS, LINE_NUMBERS, MONTH_NAMES_RU } from "@/lib/line-mapping";
 import type { LineNumber, MonthOption } from "@/lib/types";
+import type { SectionVisibility } from "@/lib/store/sections";
 import { useState, useTransition } from "react";
-import { Factory, Package, RefreshCw, Settings } from "lucide-react";
+import { RefreshCw, Settings } from "lucide-react";
+import { MainNav } from "./MainNav";
 
 type Props = {
   line: LineNumber;
@@ -13,9 +15,10 @@ type Props = {
   month: number;
   compare: boolean;
   availableMonths: MonthOption[];
+  sections: SectionVisibility;
 };
 
-export function Header({ line, year, month, compare, availableMonths }: Props) {
+export function Header({ line, year, month, compare, availableMonths, sections }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -52,26 +55,7 @@ export function Header({ line, year, month, compare, availableMonths }: Props) {
           </div>
         </Link>
 
-        <nav className="ml-2 flex rounded-lg border border-[#dcdde3] bg-white p-1 shadow-sm">
-          <Link
-            href={`/?${params.toString()}`}
-            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition ${
-              pathname === "/" ? "bg-[#192537] text-white shadow-sm" : "text-[#4b6b95] hover:text-[#192537]"
-            }`}
-          >
-            <Factory className="h-4 w-4" />
-            Производство
-          </Link>
-          <Link
-            href="/finished-products"
-            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition ${
-              pathname === "/finished-products" ? "bg-[#192537] text-white shadow-sm" : "text-[#4b6b95] hover:text-[#192537]"
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            Готовые продукции
-          </Link>
-        </nav>
+        <MainNav active="production" sections={sections} />
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {/* Compare toggle */}

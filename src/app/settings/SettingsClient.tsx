@@ -3,15 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceSourceEntry, LineNumber, SourceEntry } from "@/lib/types";
+import type { SectionVisibility } from "@/lib/store/sections";
 import { LINE_LABELS, LINE_NUMBERS, MONTH_NAMES_RU } from "@/lib/line-mapping";
 
 type Props = {
   initialAuthed: boolean;
   initialSources: SourceEntry[];
   initialFinanceSources: FinanceSourceEntry[];
+  initialSections: SectionVisibility;
 };
 
-export function SettingsClient({ initialAuthed, initialSources, initialFinanceSources }: Props) {
+export function SettingsClient({ initialAuthed, initialSources, initialFinanceSources, initialSections }: Props) {
   const router = useRouter();
   const [authed, setAuthed] = useState(initialAuthed);
   const [sources, setSources] = useState<SourceEntry[]>(initialSources);
@@ -83,6 +85,8 @@ export function SettingsClient({ initialAuthed, initialSources, initialFinanceSo
 
   return (
     <div className="space-y-6">
+      <SectionsForm initialSections={initialSections} />
+
       <SourceForm
         onSubmitted={(s) => {
           setSources((prev) => {
@@ -186,6 +190,80 @@ export function SettingsClient({ initialAuthed, initialSources, initialFinanceSo
           <li>Скопируйте ссылку и вставьте её в форму выше.</li>
           <li>Дашборд проверит формат и сохранит ссылку.</li>
         </ol>
+      </div>
+    </div>
+  );
+}
+
+const SECTION_TOGGLES: Array<{ key: keyof SectionVisibility; label: string; hint: string }> = [
+  { key: "finance", label: "Финансы", hint: "ОПиУ, ДДС и финансовые показатели" },
+  { key: "finishedProducts", label: "Готовые продукции", hint: "Продажи, остатки и таблица движения" },
+];
+
+function SectionsForm({ initialSections }: { initialSections: SectionVisibility }) {
+  const router = useRouter();
+  const [sections, setSections] = useState(initialSections);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const toggle = async (key: keyof SectionVisibility) => {
+    const prev = sections;
+    const next = { ...sections, [key]: !sections[key] };
+    setSections(next);
+    setBusy(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/sections", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error ?? "Не удалось сохранить");
+      setStatus({ ok: true, text: "Сохранено" });
+      router.refresh();
+    } catch (e: unknown) {
+      setSections(prev);
+      setStatus({ ok: false, text: e instanceof Error ? e.message : "Не удалось сохранить" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-[#dcdde3] bg-white p-5 shadow-[0_18px_45px_rgba(25,37,55,0.07)]">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-slate-800">Разделы дашборда</h2>
+        {status && <span className={`text-xs ${status.ok ? "text-emerald-600" : "text-rose-600"}`}>{status.text}</span>}
+      </div>
+      <p className="mb-4 text-xs text-slate-500">
+        Выключенный раздел пропадает из меню, а его страница перенаправляет на «Производство». Раздел «Производство» скрыть нельзя.
+      </p>
+      <div className="divide-y divide-[#e7ebf0]">
+        {SECTION_TOGGLES.map(({ key, label, hint }) => (
+          <label key={key} className="flex cursor-pointer items-center justify-between gap-4 py-3">
+            <span>
+              <span className="block text-sm font-medium text-[#192537]">{label}</span>
+              <span className="block text-xs text-slate-500">{hint}</span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sections[key]}
+              disabled={busy}
+              onClick={() => toggle(key)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${
+                sections[key] ? "bg-[#ee5c25]" : "bg-[#c1c5cd]"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  sections[key] ? "left-[22px]" : "left-0.5"
+                }`}
+              />
+            </button>
+          </label>
+        ))}
       </div>
     </div>
   );
