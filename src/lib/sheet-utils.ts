@@ -47,12 +47,19 @@ export function parseDateCell(value: CellValue): Date | null {
 }
 
 // Find a row index whose cells (joined) contain ALL given keywords (case-insensitive).
+// Для сравнения заголовков: регистр и количество пробелов не важны
+// (в таблицах встречается «Ректификация  2» с двумя пробелами).
+function normalizeLabel(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ");
+}
+
 export function findRowByAll(grid: SheetGrid, keywords: string[], startRow = 0): number {
-  const kw = keywords.map((k) => k.toLowerCase());
+  const kw = keywords.map(normalizeLabel);
   for (let r = startRow; r < grid.length; r++) {
     const row = grid[r];
     const joined = row.map((c) => toStr(c)).join(" \u0001 ").toLowerCase();
-    if (kw.every((k) => joined.includes(k))) return r;
+    const normalized = normalizeLabel(joined);
+    if (kw.every((k) => normalized.includes(k))) return r;
   }
   return -1;
 }
@@ -64,10 +71,10 @@ export function findRowContaining(grid: SheetGrid, text: string, startRow = 0): 
 // Find first column where header cell contains text (in given header row).
 export function findColInRow(grid: SheetGrid, rowIdx: number, text: string): number {
   if (rowIdx < 0 || rowIdx >= grid.length) return -1;
-  const t = text.toLowerCase();
+  const t = normalizeLabel(text);
   const row = grid[rowIdx];
   for (let c = 0; c < row.length; c++) {
-    if (toStr(row[c]).toLowerCase().includes(t)) return c;
+    if (normalizeLabel(toStr(row[c])).includes(t)) return c;
   }
   return -1;
 }
