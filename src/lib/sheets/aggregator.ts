@@ -7,6 +7,7 @@ import { fetchSheetsByNames } from "./fetcher";
 import { parseMonthlyOutput } from "./parsers/monthly-output";
 import { parseDowntime } from "./parsers/downtime";
 import { parseShiftReport, shiftSheetNames } from "./parsers/shift-report";
+import { parseSummaryPackaging } from "./parsers/summary";
 
 type CacheEntry = { data: LineMonthData; expiresAt: number };
 const cache = new Map<string, CacheEntry>();
@@ -63,6 +64,7 @@ export async function getLineMonthData(
 
   const sheetNamesToFetch = [
     "Выход и простои печи по месяцам",
+    "Сводная",
     ...DOWNTIME_SHEETS.map((d) => d.name),
     ...shiftSheetNames(),
   ];
@@ -132,10 +134,13 @@ export async function getLineMonthData(
   const thisMonthRow = monthly?.byMonth.find((m) => m.monthNumber === month);
   const prevMonthRow = monthly?.byMonth.find((m) => m.monthNumber === month - 1);
 
-  // Packaging aggregates from shifts
-  const aClass = shifts.reduce((s, x) => s + x.sorting.aClassM2, 0);
-  const bClass = shifts.reduce((s, x) => s + x.sorting.bClassM2, 0);
-  const defect = shifts.reduce((s, x) => s + x.sorting.defectM2, 0);
+  // Упаковка: берём готовые итоги со «Сводной» — там учтены и те смены, где
+  // заголовок участка записан с другим номером или вовсе без него.
+  // Если «Сводной» нет, считаем по сменам, как раньше.
+  const summaryPackaging = parseSummaryPackaging(sheetMap.get("Сводная") ?? []);
+  const aClass = summaryPackaging?.aClassM2 ?? shifts.reduce((s, x) => s + x.sorting.aClassM2, 0);
+  const bClass = summaryPackaging?.bClassM2 ?? shifts.reduce((s, x) => s + x.sorting.bClassM2, 0);
+  const defect = summaryPackaging?.defectM2 ?? shifts.reduce((s, x) => s + x.sorting.defectM2, 0);
   const totalSorted = aClass + bClass + defect;
 
   const packaging = totalSorted > 0
