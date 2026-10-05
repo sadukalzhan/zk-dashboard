@@ -114,7 +114,8 @@ export type ShiftReport = {
     bClassM2: number;
     defectM2: number;
   };
-  oee?: number;
+  // Эффективность линии глазурования за смену (ячейка EFF. в разделе ЛГ).
+  lgEfficiency?: number;
   technicalParams?: {
     pressCycleMin?: number;
     kilnCycleMin?: number;
@@ -143,7 +144,8 @@ export type LineMonthData = {
     outputM2: number;
     outputPrevM2?: number;
     downtimeMin: number;
-    oee?: number;
+    // Эффективность пресса за месяц — из «Сводной», доля 0..1.
+    pressEfficiency?: number;
     aClassM2: number;
     bClassM2: number;
     defectM2: number;
@@ -152,7 +154,8 @@ export type LineMonthData = {
     pressCycleMin?: number;
     kilnCycleMin?: number;
     kilnTemperatureC?: number;
-    oee?: number;
+    // Средняя эффективность ЛГ по сменам.
+    lgEfficiency?: number;
   } | null;
   losses: Array<{
     stage: string;

@@ -157,7 +157,7 @@ export function parseShiftReport(
     },
     rectification: { inM2: rectIn, outM2: rectOut, losses: rectLosses },
     sorting: { inM2: sortIn, aClassM2: aClass, bClassM2: bClass, defectM2: defect },
-    oee: lgEff !== undefined ? lgEff : undefined,
+    lgEfficiency: lgEff !== undefined ? lgEff : undefined,
     technicalParams: {
       pressCycleMin,
       kilnCycleMin,

@@ -14,6 +14,38 @@ export type SummaryPackaging = {
   totalM2: number;
 };
 
+// Эффективность пресса за месяц: колонка «Сутки, эффектив» в строке «Итого».
+// Доля от 0 до 1 (в таблице это ячейка с процентным форматом).
+export function parseSummaryPressEfficiency(grid: SheetGrid): number | undefined {
+  if (!grid.length) return undefined;
+  const totalsRow = findTotalsRow(grid);
+  if (totalsRow === -1) return undefined;
+
+  let col = -1;
+  for (let r = 0; r < totalsRow && col === -1; r++) {
+    const row = grid[r] ?? [];
+    for (let c = 0; c < row.length; c++) {
+      const label = norm(toStr(row[c]));
+      if (label.includes("эффектив") && label.includes("сутки")) {
+        col = c;
+        break;
+      }
+    }
+  }
+  if (col === -1) return undefined;
+
+  const value = toNumber(cell(grid, totalsRow, col));
+  if (!(value > 0)) return undefined;
+  // Если вдруг пришло «63,53» вместо доли — приводим к доле.
+  return value > 1.5 ? value / 100 : value;
+}
+
+function findTotalsRow(grid: SheetGrid): number {
+  return grid.findIndex(
+    (row) => norm(toStr(row?.[1])) === "итого" || norm(toStr(row?.[2])) === "итого",
+  );
+}
+
 const norm = (value: string): string => value.toLowerCase().replace(/\s+/g, " ").trim();
 
 // «А класс» может быть записан как кириллицей, так и латиницей.
@@ -25,9 +57,7 @@ export function parseSummaryPackaging(grid: SheetGrid): SummaryPackaging | null 
   if (!grid.length) return null;
 
   // Строка итогов: «Итого» в первой паре столбцов.
-  const totalsRow = grid.findIndex(
-    (row) => norm(toStr(row?.[1])) === "итого" || norm(toStr(row?.[2])) === "итого",
-  );
+  const totalsRow = findTotalsRow(grid);
   if (totalsRow === -1) return null;
 
   // Колонка группы «Упаковка» в шапке (шапка — всё, что выше строки итогов).

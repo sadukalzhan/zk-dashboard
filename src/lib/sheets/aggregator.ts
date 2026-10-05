@@ -7,7 +7,7 @@ import { fetchSheetsByNames } from "./fetcher";
 import { parseMonthlyOutput } from "./parsers/monthly-output";
 import { parseDowntime } from "./parsers/downtime";
 import { parseShiftReport, shiftSheetNames } from "./parsers/shift-report";
-import { parseSummaryPackaging } from "./parsers/summary";
+import { parseSummaryPackaging, parseSummaryPressEfficiency } from "./parsers/summary";
 
 type CacheEntry = { data: LineMonthData; expiresAt: number };
 const cache = new Map<string, CacheEntry>();
@@ -161,16 +161,19 @@ export async function getLineMonthData(
     0,
   );
 
-  // OEE: average from shifts (where reported)
-  const oeeValues = shifts.map((s) => s.oee).filter((v): v is number => typeof v === "number" && v > 0);
-  const oeeAvg = oeeValues.length ? (oeeValues.reduce((s, v) => s + v, 0) / oeeValues.length) : undefined;
+  // Эффективность ЛГ: среднее по сменам, где заполнена ячейка EFF.
+  const lgEffValues = shifts.map((s) => s.lgEfficiency).filter((v): v is number => typeof v === "number" && v > 0);
+  const lgEffAvg = lgEffValues.length ? (lgEffValues.reduce((s, v) => s + v, 0) / lgEffValues.length) : undefined;
+
+  // Эффективность пресса за месяц — готовый итог со «Сводной».
+  const pressEfficiency = parseSummaryPressEfficiency(sheetMap.get("Сводная") ?? []);
 
   const kpi = thisMonthRow
     ? {
         outputM2: thisMonthRow.outputM2,
         outputPrevM2: prevMonthRow?.outputM2,
         downtimeMin: totalDowntimeMin || thisMonthRow.downtimeMin,
-        oee: oeeAvg,
+        pressEfficiency,
         aClassM2: aClass,
         bClassM2: bClass,
         defectM2: defect,
@@ -190,7 +193,7 @@ export async function getLineMonthData(
     pressCycleMin: param("pressCycleMin"),
     kilnCycleMin: param("kilnCycleMin"),
     kilnTemperatureC: param("kilnTemperatureC"),
-    oee: oeeAvg,
+    lgEfficiency: lgEffAvg,
   };
 
   // Losses by stage (press → dryer → LG → kiln → rect → sort → warehouse)

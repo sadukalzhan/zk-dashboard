@@ -70,9 +70,9 @@ export function KpiCards({ data }: { data: LineMonthData }) {
           accent="amber"
         />
         <Card1
-          label="ОЕЕ"
-          value={kpi?.oee !== undefined ? formatPct((kpi.oee ?? 0) * 100, 1) : "—"}
-          sub="средний по сменам"
+          label="Эффективность пресса"
+          value={kpi?.pressEfficiency !== undefined ? formatPct(kpi.pressEfficiency * 100, 1) : "—"}
+          sub="итого за месяц"
           accent="violet"
         />
         <Card1
