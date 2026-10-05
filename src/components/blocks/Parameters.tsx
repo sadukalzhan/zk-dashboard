@@ -44,10 +44,10 @@ export function Parameters({ series }: { series: ParamsSeries[] }) {
               </tr>
             ))}
             <tr>
-              <td className="px-3 py-2 font-medium text-slate-700">Эффективность ЛГ, %</td>
+              <td className="px-3 py-2 font-medium text-slate-700">Эффективность пресса, %</td>
               {series.map((s) => (
                 <td key={s.id} className="px-3 py-2 text-right tabular-nums">
-                  {s.data.parameters?.lgEfficiency !== undefined ? formatPct(s.data.parameters.lgEfficiency * 100, 1) : "—"}
+                  {s.data.kpi?.pressEfficiency !== undefined ? formatPct(s.data.kpi.pressEfficiency * 100, 1) : "—"}
                 </td>
               ))}
             </tr>

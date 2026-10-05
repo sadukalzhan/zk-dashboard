@@ -154,8 +154,6 @@ export type LineMonthData = {
     pressCycleMin?: number;
     kilnCycleMin?: number;
     kilnTemperatureC?: number;
-    // Средняя эффективность ЛГ по сменам.
-    lgEfficiency?: number;
   } | null;
   losses: Array<{
     stage: string;

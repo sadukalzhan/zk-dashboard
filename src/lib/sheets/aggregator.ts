@@ -161,10 +161,6 @@ export async function getLineMonthData(
     0,
   );
 
-  // Эффективность ЛГ: среднее по сменам, где заполнена ячейка EFF.
-  const lgEffValues = shifts.map((s) => s.lgEfficiency).filter((v): v is number => typeof v === "number" && v > 0);
-  const lgEffAvg = lgEffValues.length ? (lgEffValues.reduce((s, v) => s + v, 0) / lgEffValues.length) : undefined;
-
   // Эффективность пресса за месяц — готовый итог со «Сводной».
   const pressEfficiency = parseSummaryPressEfficiency(sheetMap.get("Сводная") ?? []);
 
@@ -193,7 +189,6 @@ export async function getLineMonthData(
     pressCycleMin: param("pressCycleMin"),
     kilnCycleMin: param("kilnCycleMin"),
     kilnTemperatureC: param("kilnTemperatureC"),
-    lgEfficiency: lgEffAvg,
   };
 
   // Losses by stage (press → dryer → LG → kiln → rect → sort → warehouse)
