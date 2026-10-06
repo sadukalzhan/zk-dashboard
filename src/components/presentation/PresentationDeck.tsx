@@ -47,6 +47,9 @@ const PRINT_CSS = `
     break-after: page;
     break-inside: avoid;
   }
+  /* Без разрыва после последнего слайда, иначе в конце появляется пустая страница. */
+  .deck-frame:last-child { break-after: auto; }
+  html, body { height: auto !important; min-height: 0 !important; }
   .deck-scaler { transform: none !important; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

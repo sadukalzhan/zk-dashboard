@@ -498,7 +498,7 @@ export function AreaSlide({ meta, label, downtime }: { meta: SlideMeta; label: s
       {reasons.length === 0 ? (
         <Empty>Простоев с указанием причины не зафиксировано.</Empty>
       ) : (
-        <div className="grid h-full grid-cols-[340px_minmax(0,1fr)] gap-12">
+        <div className="grid h-full grid-cols-[340px_minmax(0,1fr)] gap-12 pb-3">
           <div className="flex flex-col justify-between">
             <Donut size={300} slices={slices}>
               <span className="text-[34px] font-semibold tabular-nums leading-none">{pctLabel(share(top[0].minutes))}</span>
