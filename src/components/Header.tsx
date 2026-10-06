@@ -6,7 +6,7 @@ import { LINE_LABELS, LINE_NUMBERS, MONTH_NAMES_RU } from "@/lib/line-mapping";
 import type { LineNumber, MonthOption } from "@/lib/types";
 import type { SectionVisibility } from "@/lib/store/sections";
 import { useState, useTransition } from "react";
-import { RefreshCw, Settings } from "lucide-react";
+import { FileDown, RefreshCw, Settings } from "lucide-react";
 import { MainNav } from "./MainNav";
 
 type Props = {
@@ -123,6 +123,15 @@ export function Header({ line, year, month, compare, availableMonths, sections }
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "Обновление…" : "Обновить"}
           </button>
+
+          <Link
+            href={`/presentation?line=${compare ? "all" : line}&year=${year}&month=${month}`}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#dcdde3] bg-white px-3 py-2 text-sm text-[#192537] shadow-sm hover:bg-[#f4f7fb]"
+            title="Открыть презентацию и скачать её в PDF"
+          >
+            <FileDown className="h-4 w-4" />
+            Презентация PDF
+          </Link>
 
           <Link
             href="/settings"
