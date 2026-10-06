@@ -35,7 +35,8 @@ function pctLabel(pct: number): string {
 }
 
 function compact(value: number): string {
-  if (Math.abs(value) >= 1000) return `${formatNumber(value / 1000)} тыс.`;
+  // Неразрывный пробел: иначе подпись оси переносится на две строки.
+  if (Math.abs(value) >= 1000) return `${formatNumber(value / 1000)} тыс.`;
   return formatNumber(value);
 }
 
@@ -248,10 +249,10 @@ function MonthBars({
           за год <span className="font-semibold tabular-nums text-[#192537]">{formatNumber(total)}</span> {unit}
         </span>
       </div>
-      <BarChart width={564} height={400} data={chartData} margin={{ top: 28, right: 8, left: 8, bottom: 0 }}>
+      <BarChart width={564} height={450} data={chartData} margin={{ top: 28, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke="#eef2f6" />
         <XAxis dataKey="name" tickLine={false} axisLine={{ stroke: "#dcdde3" }} tick={{ fontSize: 12, fill: "#6f8aac" }} />
-        <YAxis tickLine={false} axisLine={false} width={64} tick={{ fontSize: 12, fill: "#6f8aac" }} tickFormatter={compact} />
+        <YAxis tickLine={false} axisLine={false} width={76} tick={{ fontSize: 12, fill: "#6f8aac" }} tickFormatter={compact} />
         <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={30} isAnimationActive={false}>
           {chartData.map((r) => (
             <Cell key={r.name} fill={r.monthNumber === current ? color : mutedColor} />
@@ -578,9 +579,11 @@ function heatColor(value: number, max: number): { background: string; color: str
 }
 
 function HeatRows({
+  title,
   rows,
   days,
 }: {
+  title: string;
   rows: Array<{ label: string; values: number[] }>;
   days: number;
 }) {
@@ -588,13 +591,19 @@ function HeatRows({
   return (
     <div>
       <div className="grid gap-[3px]" style={{ gridTemplateColumns: `168px repeat(${days}, minmax(0, 1fr))` }}>
+        <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6f8aac]">{title}</div>
+        {Array.from({ length: days }, (_, i) => (
+          <div key={i} className="self-end text-center text-[11px] tabular-nums text-[#6f8aac]">
+            {i + 1}
+          </div>
+        ))}
         {rows.map((row) => (
           <div key={row.label} className="contents">
-            <div className="flex items-center truncate pr-2 text-[13px]">{row.label}</div>
+            <div className="flex items-center truncate pr-2 text-[14px]">{row.label}</div>
             {row.values.map((v, i) => (
               <div
                 key={i}
-                className="flex h-[30px] items-center justify-center rounded-[3px] text-[10px] tabular-nums"
+                className="flex h-[38px] items-center justify-center rounded-[3px] text-[11px] tabular-nums"
                 style={heatColor(v, max)}
               >
                 {v > 0 ? Math.round(v) : ""}
@@ -656,31 +665,16 @@ export function HeatmapSlide({
       title="Простои по дням месяца"
       aside={<span className="text-[14px] text-[#6f8aac]">минуты простоя; чем темнее, тем больше</span>}
     >
-      <div className="flex h-full flex-col justify-between">
-        <div className="grid gap-[3px]" style={{ gridTemplateColumns: `168px repeat(${daysInMonth}, minmax(0, 1fr))` }}>
-          <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6f8aac]">День месяца</div>
-          {Array.from({ length: daysInMonth }, (_, i) => (
-            <div key={i} className="text-center text-[11px] tabular-nums text-[#6f8aac]">
-              {i + 1}
-            </div>
-          ))}
-        </div>
-
-        <div>
-          <div className="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6f8aac]">Все участки, по сменам</div>
-          <HeatRows
-            days={daysInMonth}
-            rows={[
-              { label: "Дневная смена", values: dayShift },
-              { label: "Ночная смена", values: nightShift },
-            ]}
-          />
-        </div>
-
-        <div>
-          <div className="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6f8aac]">По участкам, за сутки</div>
-          <HeatRows days={daysInMonth} rows={perArea} />
-        </div>
+      <div className="flex h-full flex-col justify-center gap-7">
+        <HeatRows
+          title="Все участки"
+          days={daysInMonth}
+          rows={[
+            { label: "Дневная смена", values: dayShift },
+            { label: "Ночная смена", values: nightShift },
+          ]}
+        />
+        <HeatRows title="По участкам, сутки" days={daysInMonth} rows={perArea} />
       </div>
     </SlideFrame>
   );
